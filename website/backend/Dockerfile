@@ -21,12 +21,6 @@ WORKDIR /app
 COPY ./requirements.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-# Install yt-dlp bgutil pot provider plugin
-RUN pip install --no-cache-dir bgutil-ytdlp-pot-provider
-
-# Pre-install bgutil npm package so it's ready without downloading at runtime
-RUN npm install -g @imputnet/bgutil-ytdlp-pot-provider
-
 # Pre-download rembg AI model during build (saves RAM spike on first request)
 RUN mkdir -p /root/.u2net && \
     curl -L -o /root/.u2net/u2net.onnx \
@@ -34,8 +28,5 @@ RUN mkdir -p /root/.u2net && \
 
 COPY . /app
 
-# Make startup script executable
-RUN chmod +x /app/start.sh
-
-# Start bgutil server + FastAPI together
-CMD ["/bin/sh", "/app/start.sh"]
+# Railway injects $PORT at runtime
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
