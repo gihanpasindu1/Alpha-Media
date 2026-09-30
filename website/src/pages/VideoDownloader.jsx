@@ -42,9 +42,10 @@ export default function VideoDownloader() {
       const r = await fetch(`${API}/api/download`, { method: 'POST', body: fd })
       if (!r.ok) throw new Error((await r.json()).detail)
       const blob = await r.blob()
+      const xFilename = r.headers.get('x-filename')
       const disposition = r.headers.get('content-disposition') || ''
-      const match = disposition.match(/filename="?([^"]+)"?/)
-      const filename = match ? match[1] : 'download'
+      const match = disposition.match(/filename="?([^";\r\n]+)"?/)
+      const filename = xFilename || (match ? match[1] : 'download.mp4')
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
       a.download = filename
