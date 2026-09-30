@@ -69,7 +69,7 @@ async def download_video(
                 "noplaylist": True,
                 "quiet": True,
                 "cookiefile": "cookies.txt",
-                "extractor_args": {"youtube": {"player_client": ["web"], "po_token": ["web+auto"]}},
+                "extractor_args": {"youtube": {"player_client": ["web"]}},
             }
         else:
             ydl_opts = {
@@ -79,7 +79,7 @@ async def download_video(
                 "quiet": True,
                 "cookiefile": "cookies.txt",
                 "merge_output_format": "mp4",
-                "extractor_args": {"youtube": {"player_client": ["web"], "po_token": ["web+auto"]}},
+                "extractor_args": {"youtube": {"player_client": ["web"]}},
             }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
