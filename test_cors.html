@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test</title></head>
+<body>
+<script>
+async function test() {
+    const COBALT_INSTANCES = [
+        "https://co.eepy.today",
+        "https://cobalt-api.peppe8o.com",
+        "https://cobalt.kwiatekm.pl",
+        "https://api.cobalt.tools",
+        "https://api.cobalt.cat",
+        "https://cobalt.101010.top"
+    ];
+    for (const instance of COBALT_INSTANCES) {
+        try {
+            console.log("Trying", instance);
+            const res = await fetch(instance, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    url: "https://www.youtube.com/watch?v=bhKKR5He_Fo",
+                    vQuality: "720",
+                    isAudioOnly: false
+                })
+            });
+            const data = await res.json();
+            console.log("Success with", instance, data);
+            document.body.innerHTML += `<p>Success: ${instance} -> ${JSON.stringify(data)}</p>`;
+            return;
+        } catch(e) {
+            console.log("Failed", instance, e.message);
+            document.body.innerHTML += `<p>Failed: ${instance} -> ${e.message}</p>`;
+        }
+    }
+}
+test();
+</script>
+</body>
+</html>
