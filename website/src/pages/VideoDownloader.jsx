@@ -33,24 +33,24 @@ export default function VideoDownloader() {
   const handleDownload = async () => {
     if (!url.trim()) return
     setLoading(true)
-    setStatus({ type: 'loading', msg: 'Downloading… this may take a moment.' })
+    setStatus({ type: 'loading', msg: 'Downloading… this usually takes ~30 seconds.' })
     try {
       const fd = new FormData()
       fd.append('url', url)
       fd.append('quality', quality)
       fd.append('format', format)
+      
       const r = await fetch(`${API}/api/download`, { method: 'POST', body: fd })
       if (!r.ok) throw new Error((await r.json()).detail)
-      const blob = await r.blob()
-      const xFilename = r.headers.get('x-filename')
-      const disposition = r.headers.get('content-disposition') || ''
-      const match = disposition.match(/filename="?([^";\r\n]+)"?/)
-      const filename = xFilename || (match ? match[1] : 'download.mp4')
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = filename
-      a.click()
-      setStatus({ type: 'success', msg: `Downloaded: ${filename}` })
+      
+      const data = await r.json()
+      if (data.downloadUrl) {
+        // Trigger download directly from the URL in the browser
+        window.location.href = data.downloadUrl
+        setStatus({ type: 'success', msg: `Download started!` })
+      } else {
+        throw new Error("Could not retrieve download link.")
+      }
     } catch (e) {
       setStatus({ type: 'error', msg: e.message })
     } finally {

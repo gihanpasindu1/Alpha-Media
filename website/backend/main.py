@@ -55,57 +55,41 @@ async def download_video(
     quality: str = Form("720"),
     format: str = Form("video"),  # "video" | "mp3"
 ):
-    out_dir = temp_path()
-    out_dir.mkdir(parents=True)
     try:
-        if format == "mp3":
-            ydl_opts = {
-                "format": "bestaudio/best",
-                "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
-                "postprocessors": [{
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
-                }],
-                "noplaylist": True,
-                "quiet": True,
-                "cookiefile": "cookies.txt",
-                "extractor_args": {"youtube": {"player_client": ["web"], "po_token": ["web+auto"]}},
-            }
+        from apify_client import ApifyClient
+        import os
+        
+        # Use Apify to download YouTube videos cleanly without IP bans
+        apify_token = os.environ.get("APIFY_API_TOKEN", "apify_api_hro6RurENeFmPkXfidh6dZaikfxbtN4jsodI")
+        client = ApifyClient(apify_token)
+        
+        # Configure the Apify actor input
+        run_input = {
+            "startUrls": [{"url": url}],
+        }
+        
+        # Call the youtube video downloader actor
+        run = client.actor("epctex/youtube-video-downloader").call(run_input=run_input)
+        
+        # Get the dataset items safely
+        dataset_id = run.get("defaultDatasetId") if hasattr(run, "get") else getattr(run, "defaultDatasetId", None)
+        if not dataset_id and isinstance(run, dict):
+            dataset_id = run.get("defaultDatasetId")
+            
+        items = client.dataset(dataset_id).list_items().items
+        if not items:
+            raise Exception("Apify actor did not return any items. It might have failed.")
+            
+        item = items[0]
+        
+        # Extract the apify storage URL
+        if "output" in item and "url" in item["output"]:
+            download_url = item["output"]["url"]
+            return {"downloadUrl": download_url}
         else:
-            ydl_opts = {
-                "format": f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best",
-                "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
-                "noplaylist": True,
-                "quiet": True,
-                "cookiefile": "cookies.txt",
-                "merge_output_format": "mp4",
-                "extractor_args": {"youtube": {"player_client": ["web"], "po_token": ["web+auto"]}},
-            }
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-
-        files = list(out_dir.iterdir())
-        if not files:
-            raise HTTPException(500, "Download produced no file")
-
-        out_file = files[0]
-        suffix = out_file.suffix or (".mp3" if format == "mp3" else ".mp4")
-        safe_name = f"alpha_media_download{suffix}"
-
-        from fastapi.responses import Response
-        content = out_file.read_bytes()
-        cleanup(out_dir)
-        return Response(
-            content=content,
-            media_type="application/octet-stream",
-            headers={
-                "Content-Disposition": f'attachment; filename="{safe_name}"',
-                "X-Filename": safe_name,
-            },
-        )
+            raise Exception("Download URL not found in Apify response.")
+            
     except Exception as e:
-        cleanup(out_dir)
         raise HTTPException(500, str(e))
 
 
@@ -114,25 +98,23 @@ async def download_video(
 @app.post("/api/video-info")
 async def video_info(url: str = Form(...)):
     try:
-        ydl_opts = {
-            "quiet": True, 
-            "no_warnings": True, 
-            "extract_flat": False, 
-            "noplaylist": True,
-            "cookiefile": "cookies.txt",
-            "extractor_args": {"youtube": {"player_client": ["web"], "po_token": ["web+auto"]}}
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+        import urllib.request
+        import json
+        
+        # Fast extraction using official YouTube OEmbed API
+        oembed_url = f"https://www.youtube.com/oembed?url={url}&format=json"
+        req = urllib.request.Request(oembed_url, headers={'User-Agent': 'Mozilla/5.0'})
+        response = urllib.request.urlopen(req)
+        data = json.loads(response.read().decode('utf-8'))
+        
         return {
-            "title": info.get("title"),
-            "thumbnail": info.get("thumbnail"),
-            "duration": info.get("duration"),
-            "uploader": info.get("uploader"),
-            "view_count": info.get("view_count"),
+            "title": data.get("title", "YouTube Video"),
+            "thumbnail": data.get("thumbnail_url"),
+            "uploader": data.get("author_name"),
+            "duration": None
         }
     except Exception as e:
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, f"Could not fetch video info. URL might be invalid. ({str(e)})")
 
 
 # ─────────────────────────────── CLIP TRIMMER ───────────────────────────────
