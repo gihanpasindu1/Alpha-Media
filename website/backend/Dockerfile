@@ -1,24 +1,29 @@
-FROM ghcr.io/jim60105/yt-dlp:pot
+FROM python:3.11-slim
 
-# Switch to root to install extra packages
-USER root
-
-# Install Python, ffmpeg, and OpenCV dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
     ffmpeg \
     libsm6 \
     libxext6 \
+    curl \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Deno (used by yt-dlp for JS challenge solving / PO token)
+RUN curl -fsSL https://deno.land/install.sh | sh
+ENV PATH="/root/.deno/bin:$PATH"
 
 WORKDIR /app
 
 # Copy and install Python requirements
 COPY ./requirements.txt requirements.txt
-RUN pip3 install --no-cache-dir --upgrade -r requirements.txt
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-# Pre-download rembg model during build to save RAM at runtime
+# Install yt-dlp pot provider plugin for YouTube bot bypass
+RUN pip install --no-cache-dir bgutil-ytdlp-pot-provider
+
+# Pre-download rembg AI model during build (saves RAM spike on first request)
 RUN mkdir -p /root/.u2net && \
     curl -L -o /root/.u2net/u2net.onnx \
     https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx || true
@@ -26,4 +31,4 @@ RUN mkdir -p /root/.u2net && \
 COPY . /app
 
 # Railway injects $PORT at runtime
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
