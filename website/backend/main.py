@@ -55,59 +55,65 @@ async def download_video(
     quality: str = "720",
     format: str = "video",  # "video" | "mp3"
 ):
-    out_dir = temp_path()
-    out_dir.mkdir(parents=True)
+    import urllib.request
+    import json
+    import time
+    
     try:
-        # Determine the format string based on user request
-        if format == "mp3":
-            fmt = "bestaudio/best"
-            ext_args = {"postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}]}
+        osFormat = 'mp3' if format == 'mp3' else quality if quality != '720' else '720'
+        init_url = f"https://p.oceansaver.in/ajax/download.php?copyright=0&format={osFormat}&url={urllib.parse.quote(url)}"
+        
+        req = urllib.request.Request(init_url, headers={'User-Agent': 'Mozilla/5.0'})
+        res = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(res.read().decode())
+        
+        if not data.get("success"):
+            raise HTTPException(400, "Invalid URL or format not supported by Oceansaver.")
+            
+        task_id = data.get("id")
+        download_url = None
+        
+        # Poll for progress (max 30 iterations * 2s = 60s)
+        for i in range(30):
+            time.sleep(2.0)
+            prog_url = f"https://p.oceansaver.in/ajax/progress.php?id={task_id}"
+            prog_req = urllib.request.Request(prog_url, headers={'User-Agent': 'Mozilla/5.0'})
+            prog_res = urllib.request.urlopen(prog_req, timeout=10)
+            prog_data = json.loads(prog_res.read().decode())
+            
+            if prog_data.get("success") and prog_data.get("progress") == 1000 and prog_data.get("download_url"):
+                download_url = prog_data.get("download_url")
+                break
+                
+        if download_url:
+            from fastapi.responses import StreamingResponse
+            
+            def iter_file():
+                video_req = urllib.request.Request(download_url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(video_req) as video_res:
+                    while True:
+                        chunk = video_res.read(1024 * 64)
+                        if not chunk:
+                            break
+                        yield chunk
+            
+            media_type = "audio/mpeg" if format == "mp3" else "video/mp4"
+            import urllib.parse
+            import time
+            safe_filename = f"video_{int(time.time())}.{'mp3' if format == 'mp3' else 'mp4'}"
+            
+            return StreamingResponse(
+                iter_file(),
+                media_type=media_type,
+                headers={
+                    "Content-Disposition": f"attachment; filename*=utf-8''{safe_filename}",
+                    "X-Filename": safe_filename
+                }
+            )
         else:
-            fmt = f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best"
-            ext_args = {"merge_output_format": "mp4"}
+            raise HTTPException(500, "Download timed out. The video might be too long.")
             
-        ydl_opts = {
-            "format": fmt,
-            "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
-            "noplaylist": True,
-            "quiet": True,
-            "cookiefile": "cookies.txt",
-            "extractor_args": {"youtube": ["client=ANDROID_TESTSUITE,IOS"]},
-        }
-        
-        if format == "mp3":
-            ydl_opts.update(ext_args)
-        else:
-            ydl_opts.update(ext_args)
-            
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-            
-        files = list(out_dir.iterdir())
-        if not files:
-            raise HTTPException(500, "Download failed or video not found.")
-            
-        out_file = files[0]
-        content = out_file.read_bytes()
-        filename = out_file.name
-        
-        import urllib.parse
-        safe_filename = urllib.parse.quote(filename)
-        
-        cleanup(out_dir)
-        
-        from fastapi.responses import Response
-        media_type = "audio/mpeg" if format == "mp3" else "video/mp4"
-        return Response(
-            content=content,
-            media_type=media_type,
-            headers={
-                "Content-Disposition": f"attachment; filename*=utf-8''{safe_filename}",
-                "X-Filename": safe_filename
-            }
-        )
     except Exception as e:
-        cleanup(out_dir)
         raise HTTPException(500, str(e))
 
 

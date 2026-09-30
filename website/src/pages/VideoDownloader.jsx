@@ -35,41 +35,11 @@ export default function VideoDownloader() {
     setLoading(true)
     setStatus({ type: 'loading', msg: 'Downloading… this usually takes ~30 seconds.' })
     try {
-      const osFormat = format === 'mp3' ? 'mp3' : quality !== '720' ? quality : '720';
-      const initUrl = `https://p.oceansaver.in/ajax/download.php?copyright=0&format=${osFormat}&url=${encodeURIComponent(url)}`;
+      const downloadUrl = `${API}/api/download?url=${encodeURIComponent(url)}&quality=${quality}&format=${format}`;
       
-      const res = await fetch(initUrl);
-      if (!res.ok) throw new Error("Failed to contact download server.");
-      const data = await res.json();
-      
-      if (!data.success) {
-        throw new Error("Invalid URL or format not supported.");
-      }
-      
-      const id = data.id;
-      setStatus({ type: 'loading', msg: 'Processing video... this may take up to a minute.' });
-      
-      // Poll for progress
-      let downloadUrl = null;
-      for (let i = 0; i < 30; i++) {
-        await new Promise(r => setTimeout(r, 2000));
-        const progRes = await fetch(`https://p.oceansaver.in/ajax/progress.php?id=${id}`);
-        const progData = await progRes.json();
-        
-        if (progData.success && progData.progress === 1000 && progData.download_url) {
-          downloadUrl = progData.download_url;
-          break;
-        } else if (progData.success && progData.text) {
-          setStatus({ type: 'loading', msg: `Processing: ${progData.text}` });
-        }
-      }
-      
-      if (downloadUrl) {
-        window.location.href = downloadUrl;
-        setStatus({ type: 'success', msg: `Download started!` });
-      } else {
-        throw new Error("Download timed out. The video might be too long.");
-      }
+      // Trigger download directly from the backend endpoint which will proxy the video
+      window.location.href = downloadUrl;
+      setStatus({ type: 'success', msg: `Download started!` });
     } catch (e) {
       setStatus({ type: 'error', msg: e.message })
     } finally {
