@@ -1,28 +1,29 @@
-FROM python:3.10-slim
+FROM ghcr.io/jim60105/yt-dlp:pot
 
-# Install system dependencies (ffmpeg is essential for video/audio processing)
+# Switch to root to install extra packages
+USER root
+
+# Install Python, ffmpeg, and OpenCV dependencies
 RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
     ffmpeg \
     libsm6 \
     libxext6 \
-    curl \
-    nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy the requirements and install them
+# Copy and install Python requirements
 COPY ./requirements.txt requirements.txt
-# --no-cache-dir saves RAM and disk space during the Docker build
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+RUN pip3 install --no-cache-dir --upgrade -r requirements.txt
 
-# Pre-download the rembg AI model so it doesn't spike RAM during the first user request
+# Pre-download rembg model during build to save RAM at runtime
 RUN mkdir -p /root/.u2net && \
-    curl -L -o /root/.u2net/u2net.onnx https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx
+    curl -L -o /root/.u2net/u2net.onnx \
+    https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx || true
 
-# Copy the rest of the application
 COPY . /app
 
-# Railway dynamically injects a $PORT environment variable. 
-# We run Uvicorn with a single worker (default) to keep RAM usage well under 500MB.
+# Railway injects $PORT at runtime
 CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
