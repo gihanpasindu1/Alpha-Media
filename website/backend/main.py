@@ -91,6 +91,9 @@ async def download_video(
         content = out_file.read_bytes()
         filename = out_file.name
         
+        import urllib.parse
+        safe_filename = urllib.parse.quote(filename)
+        
         cleanup(out_dir)
         
         from fastapi.responses import Response
@@ -99,8 +102,8 @@ async def download_video(
             content=content,
             media_type=media_type,
             headers={
-                "Content-Disposition": f'attachment; filename="{filename}"',
-                "X-Filename": filename
+                "Content-Disposition": f"attachment; filename*=utf-8''{safe_filename}",
+                "X-Filename": safe_filename
             }
         )
     except Exception as e:
