@@ -72,9 +72,18 @@ async def download_video(
         run = client.actor("epctex/youtube-video-downloader").call(run_input=run_input)
         
         # Get the dataset items safely
-        dataset_id = run.get("defaultDatasetId") if hasattr(run, "get") else getattr(run, "defaultDatasetId", None)
-        if not dataset_id and isinstance(run, dict):
-            dataset_id = run.get("defaultDatasetId")
+        dataset_id = None
+        if hasattr(run, "default_dataset_id"):
+            dataset_id = run.default_dataset_id
+        elif hasattr(run, "get"):
+            dataset_id = run.get("defaultDatasetId") or run.get("default_dataset_id")
+        elif hasattr(run, "defaultDatasetId"):
+            dataset_id = run.defaultDatasetId
+        elif isinstance(run, dict):
+            dataset_id = run.get("defaultDatasetId") or run.get("default_dataset_id")
+            
+        if not dataset_id:
+            raise Exception("Could not extract dataset ID from Apify response.")
             
         items = client.dataset(dataset_id).list_items().items
         if not items:
