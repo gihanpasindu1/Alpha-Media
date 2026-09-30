@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Download, Scissors, Film, Image, FileText,
-  QrCode, Eye, Music, Zap, ArrowRight, Sparkles
+  QrCode, Eye, Music, Zap, ArrowRight, Sparkles,
+  Mic2, Wand2, Minimize, Palette, Type
 } from 'lucide-react'
 import './Home.css'
 
@@ -12,9 +13,12 @@ const tools = [
   { to: '/gif', icon: Film, label: 'Video → GIF', desc: 'Convert any video clip into a smooth, high-quality GIF.', color: '#ec4899' },
   { to: '/bg-remove', icon: Image, label: 'Background Remover', desc: 'Remove background from images instantly with AI in your browser.', color: '#22d3a5' },
   { to: '/pdf', icon: FileText, label: 'PDF Toolkit', desc: 'Merge, split, and compress PDF files with ease.', color: '#f59e0b' },
-  { to: '/qr', icon: QrCode, label: 'QR Code', desc: 'Generate beautiful QR codes or scan and decode any QR instantly.', color: '#06b6d4' },
   { to: '/face-blur', icon: Eye, label: 'Face Blur', desc: 'Automatically detect and blur all faces in a photo for privacy.', color: '#ff6b6b' },
-  { to: '/bpm', icon: Music, label: 'BPM Detector', desc: 'Upload a song and instantly detect its beats per minute.', color: '#34d399' },
+  { to: '/vocal-reducer', icon: Mic2, label: 'Vocal Reducer (Karaoke)', desc: 'Remove center-panned vocals from any song to make it instrumental.', color: '#10b981' },
+  { to: '/cartoonify', icon: Wand2, label: 'Cartoonify Image', desc: 'Turn your photos into cool cartoon/comic sketches with AI.', color: '#eab308' },
+  { to: '/compress-video', icon: Minimize, label: 'Video Compressor', desc: 'Drastically reduce video file sizes without losing quality.', color: '#6366f1' },
+  { to: '/palette', icon: Palette, label: 'Color Palette Extractor', desc: 'Upload a picture and instantly get its 6 dominant colors.', color: '#ec4899' },
+  { to: '/subtitles', icon: Type, label: 'Subtitle Extractor', desc: 'Download captions directly from YouTube videos as .srt files.', color: '#f97316' },
 ]
 
 const fadeUp = {

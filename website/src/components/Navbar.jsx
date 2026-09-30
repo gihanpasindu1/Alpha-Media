@@ -3,19 +3,12 @@ import { NavLink, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Zap, Download, Scissors, Film, Image, FileText,
-  QrCode, Eye, Music, Menu, X
+  QrCode, Eye, Music, Menu, X, Mic2, Wand2, Minimize, Palette, Type
 } from 'lucide-react'
 import './Navbar.css'
 
 const links = [
-  { to: '/download', label: 'Downloader', icon: Download },
-  { to: '/trim', label: 'Clip Trim', icon: Scissors },
-  { to: '/gif', label: 'Video→GIF', icon: Film },
-  { to: '/bg-remove', label: 'BG Remove', icon: Image },
-  { to: '/pdf', label: 'PDF Tools', icon: FileText },
-  { to: '/qr', label: 'QR Code', icon: QrCode },
-  { to: '/face-blur', label: 'Face Blur', icon: Eye },
-  { to: '/bpm', label: 'BPM', icon: Music },
+  { to: '/tools', label: 'All Tools', icon: Menu },
 ]
 
 export default function Navbar() {
