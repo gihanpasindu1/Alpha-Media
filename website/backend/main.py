@@ -652,13 +652,13 @@ async def extract_subtitles(url: str = Form(...)):
             raise HTTPException(404, "Subtitle downloaded but format is not srt/vtt.")
             
         content = sub_file.read_bytes()
-        safe_name = f"subtitles_{sub_file.name}"
+        safe_name = f"subtitles_{sub_file.stem}.srt"
         
         cleanup(out_dir)
         from fastapi.responses import Response
         return Response(
             content=content,
-            media_type="text/plain",
+            media_type="text/plain; charset=utf-8",
             headers={
                 "Content-Disposition": f'attachment; filename="{safe_name}"',
                 "X-Filename": safe_name
