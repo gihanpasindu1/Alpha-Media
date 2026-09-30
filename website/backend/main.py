@@ -49,62 +49,62 @@ def cleanup(*paths):
 
 # ─────────────────────────────── VIDEO DOWNLOADER ───────────────────────────
 
-@app.post("/api/download")
+@app.get("/api/download")
 async def download_video(
-    url: str = Form(...),
-    quality: str = Form("720"),
-    format: str = Form("video"),  # "video" | "mp3"
+    url: str,
+    quality: str = "720",
+    format: str = "video",  # "video" | "mp3"
 ):
+    out_dir = temp_path()
+    out_dir.mkdir(parents=True)
     try:
-        from apify_client import ApifyClient
-        import os
-        
-        # List of public Cobalt instances to bypass YouTube IP blocks
-        COBALT_INSTANCES = [
-            "https://co.eepy.today",
-            "https://cobalt-api.peppe8o.com",
-            "https://cobalt.kwiatekm.pl",
-            "https://api.cobalt.tools",
-            "https://api.cobalt.cat",
-            "https://cobalt.101010.top"
-        ]
-        
-        import urllib.request
-        import json
-        
-        download_url = None
-        last_error = ""
-        
-        for instance in COBALT_INSTANCES:
-            try:
-                # Cobalt API v7 endpoint is usually / (or /api/json on older instances)
-                api_url = f"{instance}"
-                req_data = json.dumps({"url": url, "vQuality": quality if quality != "720" else "720"}).encode('utf-8')
-                req = urllib.request.Request(api_url, data=req_data, headers={
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                })
-                
-                response = urllib.request.urlopen(req, timeout=10)
-                data = json.loads(response.read().decode('utf-8'))
-                
-                if data.get("status") == "redirect" or data.get("status") == "stream":
-                    download_url = data.get("url")
-                    break
-                elif "url" in data: # Older Cobalt instances
-                    download_url = data["url"]
-                    break
-            except Exception as e:
-                last_error = str(e)
-                continue
-                
-        if download_url:
-            return {"downloadUrl": download_url}
+        # Determine the format string based on user request
+        if format == "mp3":
+            fmt = "bestaudio/best"
+            ext_args = {"postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}]}
         else:
-            raise Exception(f"All download proxies failed. Last error: {last_error}")
+            fmt = f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best"
+            ext_args = {"merge_output_format": "mp4"}
             
+        ydl_opts = {
+            "format": fmt,
+            "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
+            "noplaylist": True,
+            "quiet": True,
+            "cookiefile": "cookies.txt",
+            "extractor_args": {"youtube": ["client=ANDROID_TESTSUITE,IOS"]},
+        }
+        
+        if format == "mp3":
+            ydl_opts.update(ext_args)
+        else:
+            ydl_opts.update(ext_args)
+            
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+            
+        files = list(out_dir.iterdir())
+        if not files:
+            raise HTTPException(500, "Download failed or video not found.")
+            
+        out_file = files[0]
+        content = out_file.read_bytes()
+        filename = out_file.name
+        
+        cleanup(out_dir)
+        
+        from fastapi.responses import Response
+        media_type = "audio/mpeg" if format == "mp3" else "video/mp4"
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "X-Filename": filename
+            }
+        )
     except Exception as e:
+        cleanup(out_dir)
         raise HTTPException(500, str(e))
 
 

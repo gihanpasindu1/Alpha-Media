@@ -33,54 +33,13 @@ export default function VideoDownloader() {
   const handleDownload = async () => {
     if (!url.trim()) return
     setLoading(true)
-    setStatus({ type: 'loading', msg: 'Downloading… finding the best server.' })
+    setStatus({ type: 'loading', msg: 'Downloading… this usually takes ~30 seconds.' })
     try {
-      const COBALT_INSTANCES = [
-        "https://co.eepy.today",
-        "https://cobalt-api.peppe8o.com",
-        "https://cobalt.kwiatekm.pl",
-        "https://api.cobalt.tools",
-        "https://api.cobalt.cat",
-        "https://cobalt.101010.top"
-      ];
+      const downloadUrl = `${API}/api/download?url=${encodeURIComponent(url)}&quality=${quality}&format=${format}`;
       
-      let downloadUrl = null;
-      let lastError = "";
-
-      for (const instance of COBALT_INSTANCES) {
-        try {
-          const res = await fetch(instance, {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-              url: url,
-              vQuality: quality !== "720" ? quality : "720",
-              isAudioOnly: format === "mp3"
-            })
-          });
-          
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          
-          const data = await res.json();
-          if (data.status === "redirect" || data.status === "stream" || data.url) {
-            downloadUrl = data.url;
-            break;
-          }
-        } catch (err) {
-          lastError = err.message;
-        }
-      }
-
-      if (downloadUrl) {
-        // Trigger download directly from the URL in the browser
-        window.location.href = downloadUrl;
-        setStatus({ type: 'success', msg: `Download started!` });
-      } else {
-        throw new Error("All download servers failed. Please try again later.");
-      }
+      // Trigger download directly from the backend endpoint
+      window.location.href = downloadUrl;
+      setStatus({ type: 'success', msg: `Download started!` });
     } catch (e) {
       setStatus({ type: 'error', msg: e.message })
     } finally {
