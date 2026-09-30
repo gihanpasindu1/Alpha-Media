@@ -68,6 +68,7 @@ async def download_video(
                 }],
                 "noplaylist": True,
                 "quiet": True,
+                "cookiefile": "cookies.txt",
                 "extractor_args": {"youtube": ["client=ANDROID_TESTSUITE,IOS"]},
             }
         else:
@@ -76,6 +77,7 @@ async def download_video(
                 "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
                 "noplaylist": True,
                 "quiet": True,
+                "cookiefile": "cookies.txt",
                 "merge_output_format": "mp4",
                 "extractor_args": {"youtube": ["client=ANDROID_TESTSUITE,IOS"]},
             }
@@ -117,6 +119,7 @@ async def video_info(url: str = Form(...)):
             "no_warnings": True, 
             "extract_flat": False, 
             "noplaylist": True,
+            "cookiefile": "cookies.txt",
             "extractor_args": {"youtube": ["client=ANDROID_TESTSUITE,IOS"]}
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -627,6 +630,7 @@ async def extract_subtitles(url: str = Form(...)):
             "subtitlesformat": "srt",
             "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
             "quiet": True,
+            "cookiefile": "cookies.txt",
             "extractor_args": {"youtube": ["client=ANDROID_TESTSUITE,IOS"]},
         }
         
