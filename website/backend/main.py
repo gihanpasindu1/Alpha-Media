@@ -284,26 +284,91 @@ async def face_blur(
     file: UploadFile = File(...),
     intensity: int = Form(30),
 ):
-    in_path = temp_path(Path(file.filename).suffix or ".jpg")
-    out_path = temp_path(".jpg")
+    suffix = Path(file.filename).suffix.lower()
+    is_video = suffix in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
+    in_path = temp_path(suffix if suffix else (".mp4" if is_video else ".jpg"))
+    out_path = temp_path(suffix if suffix else (".mp4" if is_video else ".jpg"))
+    final_video_path = temp_path(".mp4")
+    
     try:
         async with aiofiles.open(in_path, "wb") as f:
             await f.write(await file.read())
 
-        img = cv2.imread(str(in_path))
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-        faces = cascade.detectMultiScale(gray, 1.1, 4)
+        k = max(intensity | 1, 3)
 
-        for (x, y, w, h) in faces:
-            roi = img[y:y+h, x:x+w]
-            k = max(intensity | 1, 3)
-            img[y:y+h, x:x+w] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
-
-        cv2.imwrite(str(out_path), img)
-        return FileResponse(str(out_path), filename="face_blurred.jpg", media_type="image/jpeg")
+        if not is_video:
+            # Handle Image
+            img = cv2.imread(str(in_path))
+            if img is None: raise HTTPException(400, "Invalid image")
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            faces = cascade.detectMultiScale(gray, 1.1, 4)
+            for (x, y, w, h) in faces:
+                roi = img[y:y+h, x:x+w]
+                img[y:y+h, x:x+w] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+            cv2.imwrite(str(out_path), img)
+            
+            content = out_path.read_bytes()
+            from fastapi.responses import Response
+            return Response(
+                content=content, media_type="image/jpeg",
+                headers={"Content-Disposition": 'attachment; filename="face_blurred.jpg"', "X-Filename": "face_blurred.jpg"}
+            )
+        else:
+            # Handle Video
+            cap = cv2.VideoCapture(str(in_path))
+            if not cap.isOpened(): raise HTTPException(400, "Could not open video")
+            
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            
+            out = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
+            
+            while True:
+                ret, frame = cap.read()
+                if not ret: break
+                
+                # To speed up, we can downscale for detection, but let's keep it simple
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                # minSize to ignore tiny false positives
+                faces = cascade.detectMultiScale(gray, 1.1, 4, minSize=(30, 30))
+                for (x, y, w, h) in faces:
+                    roi = frame[y:y+h, x:x+w]
+                    frame[y:y+h, x:x+w] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+                out.write(frame)
+                
+            cap.release()
+            out.release()
+            
+            # Combine blurred video with original audio using ffmpeg
+            cmd = [
+                "ffmpeg", "-y",
+                "-i", str(out_path),
+                "-i", str(in_path),
+                "-c:v", "libx264", "-preset", "fast", "-crf", "26",
+                "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0?",
+                str(final_video_path)
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                # If audio merging fails (e.g., no audio), fallback to just the video
+                if out_path.exists():
+                    content = out_path.read_bytes()
+                else:
+                    raise HTTPException(500, "Video processing failed")
+            else:
+                content = final_video_path.read_bytes()
+                
+            from fastapi.responses import Response
+            return Response(
+                content=content, media_type="video/mp4",
+                headers={"Content-Disposition": 'attachment; filename="face_blurred.mp4"', "X-Filename": "face_blurred.mp4"}
+            )
+            
     finally:
-        cleanup(in_path)
+        cleanup(in_path, out_path, final_video_path)
 
 
 # ─────────────────────────────── BPM DETECTOR ───────────────────────────────

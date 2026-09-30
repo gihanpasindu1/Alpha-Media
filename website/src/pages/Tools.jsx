@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Download, Scissors, Film, Image, FileText,
-  QrCode, Eye, Music, Mic2, Wand2, Minimize, Palette, Type, ArrowRight
+  QrCode, Eye, Music, Mic2, Wand2, Minimize, Palette, Type, ArrowRight, Search
 } from 'lucide-react'
 
 export const allTools = [
@@ -27,36 +28,61 @@ const fadeUp = {
 }
 
 export default function Tools() {
+  const [query, setQuery] = useState('')
+
+  const filteredTools = allTools.filter(tool => 
+    tool.label.toLowerCase().includes(query.toLowerCase()) || 
+    tool.desc.toLowerCase().includes(query.toLowerCase())
+  )
+
   return (
     <main className="tool-page">
       <div className="container">
         <motion.div className="tool-header" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: 'center' }}>
           <h1><span className="glow-text">All Tools</span></h1>
-          <p style={{ margin: '0 auto' }}>Choose from our collection of 13 professional multimedia tools.</p>
+          <p style={{ margin: '0 auto', marginBottom: 30 }}>Choose from our collection of 13 professional multimedia tools.</p>
+          
+          <div style={{ position: 'relative', maxWidth: 500, margin: '0 auto' }}>
+            <Search size={20} style={{ position: 'absolute', left: 16, top: 14, color: 'var(--text-muted)' }} />
+            <input 
+              type="text" 
+              className="input" 
+              placeholder="Search for a tool (e.g. compress, video, pdf)..." 
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{ paddingLeft: 46, borderRadius: 30, background: 'var(--surface2)', border: '1px solid var(--border)' }}
+            />
+          </div>
         </motion.div>
 
-        <div className="tools-grid" style={{ marginTop: 40 }}>
-          {allTools.map(({ to, icon: Icon, label, desc, color }, i) => (
-            <motion.div
-              key={to}
-              custom={i}
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-            >
-              <Link to={to} className="tool-tile">
-                <div className="tool-tile-icon" style={{ background: `${color}20`, color }}>
-                  <Icon size={26} />
-                </div>
-                <div className="tool-tile-body">
-                  <h3>{label}</h3>
-                  <p>{desc}</p>
-                </div>
-                <ArrowRight size={18} className="tool-tile-arrow" />
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+        {filteredTools.length === 0 ? (
+          <div style={{ textAlign: 'center', marginTop: 60, color: 'var(--text-muted)' }}>
+            <p>No tools found matching "{query}"</p>
+          </div>
+        ) : (
+          <div className="tools-grid" style={{ marginTop: 40 }}>
+            {filteredTools.map(({ to, icon: Icon, label, desc, color }, i) => (
+              <motion.div
+                key={to}
+                custom={i}
+                initial="hidden"
+                animate="visible"
+                variants={fadeUp}
+              >
+                <Link to={to} className="tool-tile">
+                  <div className="tool-tile-icon" style={{ background: `${color}20`, color }}>
+                    <Icon size={26} />
+                  </div>
+                  <div className="tool-tile-body">
+                    <h3>{label}</h3>
+                    <p>{desc}</p>
+                  </div>
+                  <ArrowRight size={18} className="tool-tile-arrow" />
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   )

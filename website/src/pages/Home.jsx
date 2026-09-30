@@ -7,19 +7,7 @@ import {
 } from 'lucide-react'
 import './Home.css'
 
-const tools = [
-  { to: '/download', icon: Download, label: 'Video Downloader', desc: 'Download from YouTube, TikTok, Instagram & more in any quality.', color: '#6378ff' },
-  { to: '/trim', icon: Scissors, label: 'Clip Trimmer', desc: 'Cut a specific time range from any video file instantly.', color: '#a855f7' },
-  { to: '/gif', icon: Film, label: 'Video → GIF', desc: 'Convert any video clip into a smooth, high-quality GIF.', color: '#ec4899' },
-  { to: '/bg-remove', icon: Image, label: 'Background Remover', desc: 'Remove background from images instantly with AI in your browser.', color: '#22d3a5' },
-  { to: '/pdf', icon: FileText, label: 'PDF Toolkit', desc: 'Merge, split, and compress PDF files with ease.', color: '#f59e0b' },
-  { to: '/face-blur', icon: Eye, label: 'Face Blur', desc: 'Automatically detect and blur all faces in a photo for privacy.', color: '#ff6b6b' },
-  { to: '/vocal-reducer', icon: Mic2, label: 'Vocal Reducer (Karaoke)', desc: 'Remove center-panned vocals from any song to make it instrumental.', color: '#10b981' },
-  { to: '/cartoonify', icon: Wand2, label: 'Cartoonify Image', desc: 'Turn your photos into cool cartoon/comic sketches with AI.', color: '#eab308' },
-  { to: '/compress-video', icon: Minimize, label: 'Video Compressor', desc: 'Drastically reduce video file sizes without losing quality.', color: '#6366f1' },
-  { to: '/palette', icon: Palette, label: 'Color Palette Extractor', desc: 'Upload a picture and instantly get its 6 dominant colors.', color: '#ec4899' },
-  { to: '/subtitles', icon: Type, label: 'Subtitle Extractor', desc: 'Download captions directly from YouTube videos as .srt files.', color: '#f97316' },
-]
+import { allTools } from './Tools'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -68,25 +56,25 @@ export default function Home() {
             transition={{ delay: 0.35, duration: 0.5 }}
             className="hero-actions"
           >
-            <Link to="/download" className="btn btn-primary">
+            <Link to="/tools" className="btn btn-primary">
               <Zap size={18} /> Get Started
             </Link>
-            <Link to="/qr" className="btn btn-secondary">
+            <a href="#top-tools" className="btn btn-secondary">
               Explore Tools <ArrowRight size={16} />
-            </Link>
+            </a>
           </motion.div>
         </div>
       </section>
 
       {/* Tools Grid */}
-      <section className="tools-section">
+      <section className="tools-section" id="top-tools">
         <div className="container">
           <div className="section-header">
-            <h2>8 Powerful Tools</h2>
+            <h2>Our Top Tools</h2>
             <p>Professional-grade multimedia processing, right in your browser</p>
           </div>
           <div className="tools-grid">
-            {tools.map(({ to, icon: Icon, label, desc, color }, i) => (
+            {allTools.slice(0, 6).map(({ to, icon: Icon, label, desc, color }, i) => (
               <motion.div
                 key={to}
                 custom={i}
@@ -107,6 +95,11 @@ export default function Home() {
                 </Link>
               </motion.div>
             ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 40 }}>
+            <Link to="/tools" className="btn btn-secondary">
+              View All 13 Tools <ArrowRight size={18} style={{ marginLeft: 8 }} />
+            </Link>
           </div>
         </div>
       </section>

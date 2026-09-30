@@ -2,12 +2,11 @@ fastapi
 uvicorn[standard]
 python-multipart
 yt-dlp
-opencv-python-headless
+opencv-python-headless<5.0
 librosa
 soundfile
 numpy
 pypdf
 Pillow
 rembg
-ffmpeg-python
 aiofiles

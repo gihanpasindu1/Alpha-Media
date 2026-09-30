@@ -9,56 +9,72 @@ export default function FaceBlur() {
   const [file, setFile] = useState(null)
   const [original, setOriginal] = useState(null)
   const [result, setResult] = useState(null)
-  const [intensity, setIntensity] = useState(30)
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [intensity, setIntensity] = useState(30)
+  const [isVideo, setIsVideo] = useState(false)
 
   const onDrop = useCallback((accepted) => {
-    const f = accepted[0]; if (!f) return
-    setFile(f); setOriginal(URL.createObjectURL(f)); setResult(null); setStatus(null)
+    const f = accepted[0]
+    if (!f) return
+    setFile(f)
+    setIsVideo(f.type.startsWith('video/'))
+    setOriginal(URL.createObjectURL(f))
+    setResult(null)
+    setStatus(null)
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { 'image/*': [] }, multiple: false
+    onDrop, accept: { 'image/*': [], 'video/*': [] }, multiple: false
   })
 
   const handleBlur = async () => {
     if (!file) return
-    setLoading(true); setStatus({ type: 'loading', msg: 'Detecting and blurring faces…' })
+    setLoading(true)
+    setStatus({ type: 'loading', msg: isVideo ? 'Processing video frame by frame... (this will take a while!)' : 'Detecting and blurring faces...' })
     try {
       const fd = new FormData()
-      fd.append('file', file); fd.append('intensity', intensity)
+      fd.append('file', file)
+      fd.append('intensity', intensity)
       const r = await fetch(`${API}/api/face-blur`, { method: 'POST', body: fd })
-      if (!r.ok) throw new Error((await r.json()).detail)
+      if (!r.ok) throw new Error((await r.json()).detail || "Failed to process file")
+      
       const blob = await r.blob()
       setResult(URL.createObjectURL(blob))
-      setStatus({ type: 'success', msg: 'Faces blurred successfully!' })
+      setStatus({ type: 'success', msg: 'Face blur applied successfully!' })
     } catch (e) {
       setStatus({ type: 'error', msg: e.message })
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDownload = () => {
     if (!result) return
-    const a = document.createElement('a'); a.href = result; a.download = 'face_blurred.jpg'; a.click()
+    const filename = isVideo ? 'face_blurred.mp4' : 'face_blurred.jpg'
+    const a = document.createElement('a')
+    a.href = result
+    a.download = filename
+    a.click()
   }
 
   return (
     <main className="tool-page">
       <div className="container">
         <motion.div className="tool-header" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1><span className="glow-text">Face Blur</span></h1>
-          <p>Automatically detect and blur all faces in a photo for privacy. Powered by OpenCV.</p>
+          <h1><span className="glow-text">Face Blur (Photos & Videos)</span></h1>
+          <p>Automatically detect and blur all faces in a photo or video to protect privacy.</p>
         </motion.div>
 
         <motion.div className="tool-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <div {...getRootProps()} className={`dropzone ${isDragActive ? 'active' : ''}`}>
             <input {...getInputProps()} />
             <div className="dropzone-icon"><Upload size={40} /></div>
-            {file
-              ? <><p style={{ fontWeight: 600 }}>{file.name}</p><p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{(file.size / 1024).toFixed(0)} KB</p></>
-              : <><p style={{ fontWeight: 600, marginBottom: 8 }}>Drop a photo here</p><p style={{ color: 'var(--text-muted)', fontSize: 14 }}>All faces will be automatically detected and blurred</p></>
-            }
+            {file ? (
+              <><p style={{ fontWeight: 600 }}>{file.name}</p><p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{(file.size / 1024 / 1024).toFixed(1)} MB</p></>
+            ) : (
+              <><p style={{ fontWeight: 600, marginBottom: 8 }}>Drop a photo or short video here</p><p style={{ color: 'var(--text-muted)', fontSize: 14 }}>JPG, PNG, WEBP, MP4, MOV</p></>
+            )}
           </div>
 
           {(original || result) && (
@@ -66,27 +82,32 @@ export default function FaceBlur() {
               {original && (
                 <div>
                   <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>Original</p>
-                  <img src={original} alt="original" style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)' }} />
+                  {isVideo ? (
+                    <video src={original} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)' }} />
+                  ) : (
+                    <img src={original} alt="original" style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)' }} />
+                  )}
                 </div>
               )}
               {result && (
                 <div>
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>Result</p>
-                  <img src={result} alt="blurred" style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)' }} />
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>Blurred</p>
+                  {isVideo ? (
+                    <video src={result} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)' }} />
+                  ) : (
+                    <img src={result} alt="blurred" style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)' }} />
+                  )}
                 </div>
               )}
             </div>
           )}
-
+          
           <div className="form-group" style={{ marginTop: 20 }}>
             <label>Blur Intensity: {intensity}</label>
-            <input type="range" min="5" max="60" value={intensity} onChange={e => setIntensity(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent)' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)' }}>
-              <span>Light blur</span><span>Heavy blur</span>
-            </div>
+            <input type="range" min="10" max="100" value={intensity} onChange={(e) => setIntensity(e.target.value)} style={{ width: '100%' }} />
           </div>
 
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
             <button className="btn btn-primary" onClick={handleBlur} disabled={loading || !file} style={{ flex: 1 }}>
               {loading ? <><span className="spinner" /> Processing…</> : <><Eye size={18} /> Blur Faces</>}
             </button>
