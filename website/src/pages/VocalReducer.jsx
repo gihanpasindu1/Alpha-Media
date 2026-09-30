@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Mic2, Upload, Download } from 'lucide-react'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function VocalReducer() {
   const [file, setFile] = useState(null)

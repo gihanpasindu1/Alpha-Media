@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Music, Upload } from 'lucide-react'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function getBpmCategory(bpm) {
   if (bpm < 60) return { label: 'Very Slow', color: '#6378ff' }

@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Eye, Upload, Download } from 'lucide-react'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function FaceBlur() {
   const [file, setFile] = useState(null)
