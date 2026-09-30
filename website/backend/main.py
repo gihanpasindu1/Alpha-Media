@@ -59,44 +59,50 @@ async def download_video(
         from apify_client import ApifyClient
         import os
         
-        # Use Apify to download YouTube videos cleanly without IP bans
-        apify_token = os.environ.get("APIFY_API_TOKEN", "apify_api_hro6RurENeFmPkXfidh6dZaikfxbtN4jsodI")
-        client = ApifyClient(apify_token)
+        # List of public Cobalt instances to bypass YouTube IP blocks
+        COBALT_INSTANCES = [
+            "https://co.eepy.today",
+            "https://cobalt-api.peppe8o.com",
+            "https://cobalt.kwiatekm.pl",
+            "https://api.cobalt.tools",
+            "https://api.cobalt.cat",
+            "https://cobalt.101010.top"
+        ]
         
-        # Configure the Apify actor input
-        run_input = {
-            "startUrls": [{"url": url}],
-        }
+        import urllib.request
+        import json
         
-        # Call the youtube video downloader actor
-        run = client.actor("epctex/youtube-video-downloader").call(run_input=run_input)
+        download_url = None
+        last_error = ""
         
-        # Get the dataset items safely
-        dataset_id = None
-        if hasattr(run, "default_dataset_id"):
-            dataset_id = run.default_dataset_id
-        elif hasattr(run, "get"):
-            dataset_id = run.get("defaultDatasetId") or run.get("default_dataset_id")
-        elif hasattr(run, "defaultDatasetId"):
-            dataset_id = run.defaultDatasetId
-        elif isinstance(run, dict):
-            dataset_id = run.get("defaultDatasetId") or run.get("default_dataset_id")
-            
-        if not dataset_id:
-            raise Exception("Could not extract dataset ID from Apify response.")
-            
-        items = client.dataset(dataset_id).list_items().items
-        if not items:
-            raise Exception("Apify actor did not return any items. It might have failed.")
-            
-        item = items[0]
-        
-        # Extract the apify storage URL
-        if "output" in item and "url" in item["output"]:
-            download_url = item["output"]["url"]
+        for instance in COBALT_INSTANCES:
+            try:
+                # Cobalt API v7 endpoint is usually / (or /api/json on older instances)
+                api_url = f"{instance}"
+                req_data = json.dumps({"url": url, "vQuality": quality if quality != "720" else "720"}).encode('utf-8')
+                req = urllib.request.Request(api_url, data=req_data, headers={
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                })
+                
+                response = urllib.request.urlopen(req, timeout=10)
+                data = json.loads(response.read().decode('utf-8'))
+                
+                if data.get("status") == "redirect" or data.get("status") == "stream":
+                    download_url = data.get("url")
+                    break
+                elif "url" in data: # Older Cobalt instances
+                    download_url = data["url"]
+                    break
+            except Exception as e:
+                last_error = str(e)
+                continue
+                
+        if download_url:
             return {"downloadUrl": download_url}
         else:
-            raise Exception("Download URL not found in Apify response.")
+            raise Exception(f"All download proxies failed. Last error: {last_error}")
             
     except Exception as e:
         raise HTTPException(500, str(e))
