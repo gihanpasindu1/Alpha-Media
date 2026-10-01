@@ -18,6 +18,12 @@ import ImageCompressor from './pages/ImageCompressor'
 import ImageConverter from './pages/ImageConverter'
 import MemeGenerator from './pages/MemeGenerator'
 import ImageToText from './pages/ImageToText'
+import ScreenRecorder from './pages/ScreenRecorder'
+import VideoToMp3 from './pages/VideoToMp3'
+import VideoSpeedChanger from './pages/VideoSpeedChanger'
+import RemoveWatermark from './pages/RemoveWatermark'
+import AddSubtitles from './pages/AddSubtitles'
+import MergeVideos from './pages/MergeVideos'
 import Tools from './pages/Tools'
 
 export default function App() {
@@ -43,6 +49,12 @@ export default function App() {
         <Route path="/convert-image" element={<ImageConverter />} />
         <Route path="/meme" element={<MemeGenerator />} />
         <Route path="/ocr" element={<ImageToText />} />
+        <Route path="/screen-record" element={<ScreenRecorder />} />
+        <Route path="/video-to-mp3" element={<VideoToMp3 />} />
+        <Route path="/video-speed" element={<VideoSpeedChanger />} />
+        <Route path="/remove-watermark" element={<RemoveWatermark />} />
+        <Route path="/add-subtitles" element={<AddSubtitles />} />
+        <Route path="/merge-videos" element={<MergeVideos />} />
         <Route path="/tools" element={<Tools />} />
       </Routes>
     </>

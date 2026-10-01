@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Download, Scissors, Film, Image, FileText,
-  QrCode, Eye, Music, Mic2, Wand2, Minimize, Minimize2, Palette, Type, ArrowRight, Search, RefreshCw, Smile
+  QrCode, Eye, Music, Mic2, Wand2, Minimize, Minimize2, Palette, Type, ArrowRight, Search, RefreshCw, Smile, Monitor, Headphones, FastForward, Eraser, PlusSquare, Merge
 } from 'lucide-react'
 
 export const allTools = [
@@ -23,6 +23,12 @@ export const allTools = [
   { to: '/convert-image', icon: RefreshCw, label: 'Image Format Converter', desc: 'Convert images between PNG, JPEG, and WebP instantly.', color: '#8b5cf6' },
   { to: '/meme', icon: Smile, label: 'Meme Generator', desc: 'Add classic top and bottom text to any image to create memes instantly.', color: '#ef4444' },
   { to: '/ocr', icon: FileText, label: 'Image to Text (OCR)', desc: 'Extract text from any image (screenshots, documents) using AI.', color: '#14b8a6' },
+  { to: '/screen-record', icon: Monitor, label: 'Screen Recorder', desc: 'Record your screen, window, or tab instantly in browser.', color: '#3b82f6' },
+  { to: '/video-to-mp3', icon: Headphones, label: 'Video to MP3', desc: 'Extract high-quality audio from any video file instantly.', color: '#8b5cf6' },
+  { to: '/video-speed', icon: FastForward, label: 'Video Speed Changer', desc: 'Speed up or slow down a video. Audio tempo adjusts automatically.', color: '#eab308' },
+  { to: '/remove-watermark', icon: Eraser, label: 'Remove Watermark', desc: 'Blur out a specific region of a video to hide logos or watermarks.', color: '#f43f5e' },
+  { to: '/add-subtitles', icon: PlusSquare, label: 'Add Subtitles', desc: 'Hardcode/burn an .srt subtitle file directly into your video.', color: '#10b981' },
+  { to: '/merge-videos', icon: Merge, label: 'Merge Videos', desc: 'Join two videos together into a single continuous video file.', color: '#6366f1' },
   { to: '/subtitles', icon: Type, label: 'Subtitle Extractor', desc: 'Download captions directly from YouTube videos as .srt files.', color: '#f97316' },
 ]
 

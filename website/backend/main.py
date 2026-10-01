@@ -726,6 +726,206 @@ async def bg_remove(file: UploadFile = File(...)):
     finally:
         cleanup(in_path, out_path)
 
+# ─────────────────────────────── VIDEO TO MP3 ───────────────────────────────
+
+@app.post("/api/video-to-mp3")
+async def video_to_mp3(file: UploadFile = File(...)):
+    in_path = temp_path(Path(file.filename).suffix or ".mp4")
+    out_path = temp_path(".mp3")
+    try:
+        async with aiofiles.open(in_path, "wb") as f:
+            await f.write(await file.read())
+            
+        cmd = ["ffmpeg", "-y", "-i", str(in_path), "-q:a", "0", "-map", "a", str(out_path)]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise HTTPException(500, f"Conversion failed: {result.stderr[-500:]}")
+            
+        content = out_path.read_bytes()
+        from fastapi.responses import Response
+        return Response(
+            content=content, media_type="audio/mpeg",
+            headers={"Content-Disposition": 'attachment; filename="audio.mp3"', "X-Filename": "audio.mp3"}
+        )
+    finally:
+        cleanup(in_path, out_path)
+
+# ─────────────────────────────── VIDEO SPEED CHANGER ────────────────────────
+
+@app.post("/api/video-speed")
+async def video_speed(
+    file: UploadFile = File(...),
+    speed: float = Form(...)
+):
+    if speed <= 0 or speed > 4.0:
+        raise HTTPException(400, "Speed must be between 0.1 and 4.0")
+        
+    in_path = temp_path(Path(file.filename).suffix or ".mp4")
+    out_path = temp_path(".mp4")
+    try:
+        async with aiofiles.open(in_path, "wb") as f:
+            await f.write(await file.read())
+            
+        # Audio tempo filter (atempo) only supports 0.5 to 100.0, video (setpts) is inverse
+        v_pts = 1.0 / speed
+        a_tempo = speed
+        
+        # If speed < 0.5, we must chain atempo filters (e.g. 0.25 -> atempo=0.5,atempo=0.5)
+        # For simplicity in this implementation, we will clamp audio tempo between 0.5 and 2.0 
+        # or use multiple filters if outside the bounds.
+        a_filter = f"atempo={a_tempo}"
+        if a_tempo < 0.5:
+            a_filter = f"atempo=0.5,atempo={a_tempo/0.5}"
+        elif a_tempo > 2.0:
+            a_filter = f"atempo=2.0,atempo={a_tempo/2.0}"
+            
+        cmd = [
+            "ffmpeg", "-y", "-i", str(in_path),
+            "-filter_complex", f"[0:v]setpts={v_pts}*PTS[v];[0:a]{a_filter}[a]",
+            "-map", "[v]", "-map", "[a]",
+            str(out_path)
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        # If audio fails (e.g. video has no audio), try just video
+        if result.returncode != 0:
+            cmd = ["ffmpeg", "-y", "-i", str(in_path), "-filter:v", f"setpts={v_pts}*PTS", str(out_path)]
+            result2 = subprocess.run(cmd, capture_output=True, text=True)
+            if result2.returncode != 0:
+                raise HTTPException(500, f"Speed change failed: {result.stderr[-500:]}")
+
+        content = out_path.read_bytes()
+        from fastapi.responses import Response
+        return Response(
+            content=content, media_type="video/mp4",
+            headers={"Content-Disposition": 'attachment; filename="speed_changed.mp4"', "X-Filename": "speed_changed.mp4"}
+        )
+    finally:
+        cleanup(in_path, out_path)
+
+# ─────────────────────────────── REMOVE WATERMARK ───────────────────────────
+
+@app.post("/api/remove-watermark")
+async def remove_watermark(
+    file: UploadFile = File(...),
+    x: int = Form(...),
+    y: int = Form(...),
+    w: int = Form(...),
+    h: int = Form(...)
+):
+    in_path = temp_path(Path(file.filename).suffix or ".mp4")
+    out_path = temp_path(".mp4")
+    try:
+        async with aiofiles.open(in_path, "wb") as f:
+            await f.write(await file.read())
+            
+        cmd = [
+            "ffmpeg", "-y", "-i", str(in_path),
+            "-vf", f"delogo=x={x}:y={y}:w={w}:h={h}",
+            "-c:a", "copy",
+            str(out_path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise HTTPException(500, f"Watermark removal failed: {result.stderr[-500:]}")
+            
+        content = out_path.read_bytes()
+        from fastapi.responses import Response
+        return Response(
+            content=content, media_type="video/mp4",
+            headers={"Content-Disposition": 'attachment; filename="no_watermark.mp4"', "X-Filename": "no_watermark.mp4"}
+        )
+    finally:
+        cleanup(in_path, out_path)
+
+# ─────────────────────────────── ADD SUBTITLES ──────────────────────────────
+
+@app.post("/api/add-subtitles")
+async def add_subtitles(
+    file: UploadFile = File(...),
+    srt: UploadFile = File(...)
+):
+    in_path = temp_path(Path(file.filename).suffix or ".mp4")
+    srt_path = temp_path(".srt")
+    out_path = temp_path(".mp4")
+    try:
+        async with aiofiles.open(in_path, "wb") as f:
+            await f.write(await file.read())
+        async with aiofiles.open(srt_path, "wb") as f:
+            await f.write(await srt.read())
+            
+        # Fix paths for FFmpeg subtitles filter on Windows (needs escaped backslashes and colons)
+        safe_srt = str(srt_path).replace('\\', '/').replace(':', '\\:')
+            
+        cmd = [
+            "ffmpeg", "-y", "-i", str(in_path),
+            "-vf", f"subtitles='{safe_srt}'",
+            "-c:a", "copy",
+            str(out_path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise HTTPException(500, f"Subtitle burn-in failed: {result.stderr[-500:]}")
+            
+        content = out_path.read_bytes()
+        from fastapi.responses import Response
+        return Response(
+            content=content, media_type="video/mp4",
+            headers={"Content-Disposition": 'attachment; filename="subtitled.mp4"', "X-Filename": "subtitled.mp4"}
+        )
+    finally:
+        cleanup(in_path, srt_path, out_path)
+
+# ─────────────────────────────── MERGE TWO VIDEOS ───────────────────────────
+
+@app.post("/api/merge-videos")
+async def merge_videos(
+    file1: UploadFile = File(...),
+    file2: UploadFile = File(...)
+):
+    path1 = temp_path(Path(file1.filename).suffix or ".mp4")
+    path2 = temp_path(Path(file2.filename).suffix or ".mp4")
+    out_path = temp_path(".mp4")
+    try:
+        async with aiofiles.open(path1, "wb") as f:
+            await f.write(await file1.read())
+        async with aiofiles.open(path2, "wb") as f:
+            await f.write(await file2.read())
+            
+        # Re-encode to ensure different codecs/resolutions merge perfectly
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(path1), "-i", str(path2),
+            "-filter_complex", "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[outv][outa]",
+            "-map", "[outv]", "-map", "[outa]",
+            str(out_path)
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        # Fallback if audio fails (e.g. one video has no audio)
+        if result.returncode != 0:
+            cmd_no_audio = [
+                "ffmpeg", "-y",
+                "-i", str(path1), "-i", str(path2),
+                "-filter_complex", "[0:v][1:v]concat=n=2:v=1[outv]",
+                "-map", "[outv]",
+                str(out_path)
+            ]
+            result2 = subprocess.run(cmd_no_audio, capture_output=True, text=True)
+            if result2.returncode != 0:
+                raise HTTPException(500, f"Merge failed: {result.stderr[-500:]}")
+
+        content = out_path.read_bytes()
+        from fastapi.responses import Response
+        return Response(
+            content=content, media_type="video/mp4",
+            headers={"Content-Disposition": 'attachment; filename="merged.mp4"', "X-Filename": "merged.mp4"}
+        )
+    finally:
+        cleanup(path1, path2, out_path)
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 
