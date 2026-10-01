@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Minimize, Upload } from 'lucide-react'
+import { useXhrUpload } from '../hooks/useXhrUpload'
+import ProgressBar from '../components/ProgressBar'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -9,11 +11,12 @@ export default function VideoCompressor() {
   const [file, setFile] = useState(null)
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
+  const { upload, progress, phase, reset } = useXhrUpload()
 
   const onDrop = useCallback((accepted) => {
     const f = accepted[0]; if (!f) return
-    setFile(f); setStatus(null)
-  }, [])
+    setFile(f); setStatus(null); reset()
+  }, [reset])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop, accept: { 'video/*': [] }, multiple: false
@@ -21,20 +24,19 @@ export default function VideoCompressor() {
 
   const handleCompress = async () => {
     if (!file) return
-    setLoading(true); setStatus({ type: 'loading', msg: 'Compressing video... this might take a minute.' })
+    setLoading(true)
+    setStatus(null)
+    reset()
     try {
-      const fd = new FormData(); fd.append('file', file)
-      const r = await fetch(`${API}/api/compress-video`, { method: 'POST', body: fd })
-      if (!r.ok) throw new Error((await r.json()).detail || "Failed to process video")
-      
-      const blob = await r.blob()
-      const filename = r.headers.get('x-filename') || 'compressed.mp4'
+      const fd = new FormData()
+      fd.append('file', file)
+      const { blob, headers } = await upload(`${API}/api/compress-video`, fd)
+      const filename = headers['x-filename'] || 'compressed.mp4'
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
       a.download = filename
       a.click()
-      
-      setStatus({ type: 'success', msg: `Success! Downloaded as ${filename}` })
+      setStatus({ type: 'success', msg: `✅ Success! Downloaded as ${filename}` })
     } catch (e) {
       setStatus({ type: 'error', msg: e.message })
     } finally { setLoading(false) }
@@ -62,7 +64,9 @@ export default function VideoCompressor() {
             {loading ? <><span className="spinner" /> Compressing…</> : <><Minimize size={18} /> Compress Video</>}
           </button>
 
-          {status && <div className={`status-box ${status.type}`}>{status.type === 'loading' && <span className="spinner" />}{status.msg}</div>}
+          <ProgressBar phase={phase} progress={progress} />
+
+          {status && <div className={`status-box ${status.type}`}>{status.msg}</div>}
         </motion.div>
       </div>
     </main>

@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Image as ImageIcon, Upload, Download } from 'lucide-react'
+import { useXhrUpload } from '../hooks/useXhrUpload'
+import ProgressBar from '../components/ProgressBar'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -11,11 +13,12 @@ export default function Cartoonifier() {
   const [result, setResult] = useState(null)
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
+  const { upload, progress, phase, reset } = useXhrUpload()
 
   const onDrop = useCallback((accepted) => {
     const f = accepted[0]; if (!f) return
-    setFile(f); setOriginal(URL.createObjectURL(f)); setResult(null); setStatus(null)
-  }, [])
+    setFile(f); setOriginal(URL.createObjectURL(f)); setResult(null); setStatus(null); reset()
+  }, [reset])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop, accept: { 'image/*': [] }, multiple: false
@@ -23,13 +26,10 @@ export default function Cartoonifier() {
 
   const handleCartoonify = async () => {
     if (!file) return
-    setLoading(true); setStatus({ type: 'loading', msg: 'Applying cartoon effect…' })
+    setLoading(true); setStatus(null); reset()
     try {
       const fd = new FormData(); fd.append('file', file)
-      const r = await fetch(`${API}/api/cartoonify`, { method: 'POST', body: fd })
-      if (!r.ok) throw new Error((await r.json()).detail || "Failed to process image")
-      
-      const blob = await r.blob()
+      const { blob } = await upload(`${API}/api/cartoonify`, fd)
       setResult(URL.createObjectURL(blob))
       setStatus({ type: 'success', msg: 'Image cartoonified successfully!' })
     } catch (e) {
@@ -88,7 +88,8 @@ export default function Cartoonifier() {
             )}
           </div>
 
-          {status && <div className={`status-box ${status.type}`}>{status.type === 'loading' && <span className="spinner" />}{status.msg}</div>}
+          <ProgressBar phase={phase} progress={progress} />
+          {status && <div className={`status-box ${status.type}`}>{status.msg}</div>}
         </motion.div>
       </div>
     </main>

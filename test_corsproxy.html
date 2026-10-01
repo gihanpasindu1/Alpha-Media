@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test Corsproxy</title></head>
+<body>
+<script>
+async function test() {
+    try {
+        const url = 'https://corsproxy.io/?' + encodeURIComponent('https://co.eepy.today/');
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                url: "https://www.youtube.com/watch?v=bhKKR5He_Fo",
+                videoQuality: "720",
+                isAudioOnly: false
+            })
+        });
+        const data = await res.json();
+        console.log("Success:", data);
+        document.body.innerHTML += `<p>Success: ${JSON.stringify(data)}</p>`;
+    } catch(e) {
+        console.log("Failed:", e.message);
+        document.body.innerHTML += `<p>Failed: ${e.message}</p>`;
+    }
+}
+test();
+</script>
+</body>
+</html>

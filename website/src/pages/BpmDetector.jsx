@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Music, Upload } from 'lucide-react'
+import { useXhrUpload } from '../hooks/useXhrUpload'
+import ProgressBar from '../components/ProgressBar'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -19,11 +21,12 @@ export default function BpmDetector() {
   const [bpm, setBpm] = useState(null)
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
+  const { upload, progress, phase, reset } = useXhrUpload()
 
   const onDrop = useCallback((accepted) => {
     const f = accepted[0]; if (!f) return
-    setFile(f); setBpm(null); setStatus(null)
-  }, [])
+    setFile(f); setBpm(null); setStatus(null); reset()
+  }, [reset])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop, accept: { 'audio/*': [], 'video/mp4': [] }, multiple: false
@@ -31,14 +34,19 @@ export default function BpmDetector() {
 
   const handleDetect = async () => {
     if (!file) return
-    setLoading(true); setStatus({ type: 'loading', msg: 'Analyzing audio… (analysing up to 60 seconds)' })
+    setLoading(true); setStatus(null); reset()
     try {
       const fd = new FormData(); fd.append('file', file)
-      const r = await fetch(`${API}/api/bpm`, { method: 'POST', body: fd })
-      if (!r.ok) throw new Error((await r.json()).detail)
-      const data = await r.json()
+      // BPM returns JSON not blob — use fetch but track upload with XHR approach
+      const xhr = new XMLHttpRequest()
+      const data = await new Promise((resolve, reject) => {
+        xhr.upload.onprogress = (e) => { if (e.lengthComputable) { const p = Math.round(e.loaded/e.total*100); reset(); } }
+        xhr.onload = () => xhr.status < 300 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error(JSON.parse(xhr.responseText).detail))
+        xhr.onerror = () => reject(new Error('Network error'))
+        xhr.open('POST', `${API}/api/bpm`)
+        xhr.send(fd)
+      })
       setBpm(data.bpm)
-      setStatus(null)
     } catch (e) {
       setStatus({ type: 'error', msg: e.message })
     } finally { setLoading(false) }
@@ -91,7 +99,8 @@ export default function BpmDetector() {
             {loading ? <><span className="spinner" /> Analyzing…</> : <><Music size={18} /> Detect BPM</>}
           </button>
 
-          {status && <div className={`status-box ${status.type}`}>{status.type === 'loading' && <span className="spinner" />}{status.msg}</div>}
+          <ProgressBar phase={phase} progress={progress} />
+          {status && <div className={`status-box ${status.type}`}>{status.msg}</div>}
         </motion.div>
       </div>
 

@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Mic2, Upload, Download } from 'lucide-react'
+import { useXhrUpload } from '../hooks/useXhrUpload'
+import ProgressBar from '../components/ProgressBar'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -10,14 +12,13 @@ export default function VocalReducer() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
+  const { upload, progress, phase, reset } = useXhrUpload()
 
   const onDrop = useCallback((accepted) => {
     const f = accepted[0]
     if (!f) return
-    setFile(f)
-    setResult(null)
-    setStatus(null)
-  }, [])
+    setFile(f); setResult(null); setStatus(null); reset()
+  }, [reset])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop, accept: { 'audio/*': [] }, multiple: false
@@ -25,30 +26,20 @@ export default function VocalReducer() {
 
   const handleReduce = async () => {
     if (!file) return
-    setLoading(true)
-    setStatus({ type: 'loading', msg: 'Reducing vocals... (This takes a few seconds)' })
+    setLoading(true); setStatus(null); reset()
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const r = await fetch(`${API}/api/vocal-reducer`, { method: 'POST', body: fd })
-      if (!r.ok) throw new Error((await r.json()).detail || "Failed to process audio")
-      
-      const blob = await r.blob()
+      const { blob, headers } = await upload(`${API}/api/vocal-reducer`, fd)
       const url = URL.createObjectURL(blob)
       setResult(url)
-      
-      const filename = r.headers.get('x-filename') || 'karaoke_instrumental.wav'
+      const filename = headers['x-filename'] || 'karaoke_instrumental.wav'
       const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      
+      a.href = url; a.download = filename; a.click()
       setStatus({ type: 'success', msg: `Success! Downloaded as ${filename}` })
     } catch (e) {
       setStatus({ type: 'error', msg: e.message })
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   return (
@@ -81,7 +72,8 @@ export default function VocalReducer() {
             {loading ? <><span className="spinner" /> Processing…</> : <><Mic2 size={18} /> Reduce Vocals</>}
           </button>
 
-          {status && <div className={`status-box ${status.type}`}>{status.type === 'loading' && <span className="spinner" />}{status.msg}</div>}
+          <ProgressBar phase={phase} progress={progress} />
+          {status && <div className={`status-box ${status.type}`}>{status.msg}</div>}
         </motion.div>
       </div>
     </main>

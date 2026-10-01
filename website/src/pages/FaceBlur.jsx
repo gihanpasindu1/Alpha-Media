@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Eye, Upload, Download } from 'lucide-react'
+import { useXhrUpload } from '../hooks/useXhrUpload'
+import ProgressBar from '../components/ProgressBar'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -13,6 +15,7 @@ export default function FaceBlur() {
   const [loading, setLoading] = useState(false)
   const [intensity, setIntensity] = useState(30)
   const [isVideo, setIsVideo] = useState(false)
+  const { upload, progress, phase, reset } = useXhrUpload()
 
   const onDrop = useCallback((accepted) => {
     const f = accepted[0]
@@ -22,7 +25,8 @@ export default function FaceBlur() {
     setOriginal(URL.createObjectURL(f))
     setResult(null)
     setStatus(null)
-  }, [])
+    reset()
+  }, [reset])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop, accept: { 'image/*': [], 'video/*': [] }, multiple: false
@@ -31,15 +35,13 @@ export default function FaceBlur() {
   const handleBlur = async () => {
     if (!file) return
     setLoading(true)
-    setStatus({ type: 'loading', msg: isVideo ? 'Processing video frame by frame... (this will take a while!)' : 'Detecting and blurring faces...' })
+    setStatus(null)
+    reset()
     try {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('intensity', intensity)
-      const r = await fetch(`${API}/api/face-blur`, { method: 'POST', body: fd })
-      if (!r.ok) throw new Error((await r.json()).detail || "Failed to process file")
-      
-      const blob = await r.blob()
+      const { blob } = await upload(`${API}/api/face-blur`, fd)
       setResult(URL.createObjectURL(blob))
       setStatus({ type: 'success', msg: 'Face blur applied successfully!' })
     } catch (e) {
@@ -118,7 +120,9 @@ export default function FaceBlur() {
             )}
           </div>
 
-          {status && <div className={`status-box ${status.type}`}>{status.type === 'loading' && <span className="spinner" />}{status.msg}</div>}
+          <ProgressBar phase={phase} progress={progress} />
+
+          {status && <div className={`status-box ${status.type}`}>{status.msg}</div>}
         </motion.div>
       </div>
     </main>
