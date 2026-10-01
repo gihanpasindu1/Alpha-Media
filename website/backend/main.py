@@ -49,71 +49,92 @@ def cleanup(*paths):
 
 # ─────────────────────────────── VIDEO DOWNLOADER ───────────────────────────
 
+import urllib.request
+import urllib.parse
+import json
+import time as _time
+
 @app.get("/api/download")
 async def download_video(
     url: str,
     quality: str = "720",
     format: str = "video",  # "video" | "mp3"
 ):
-    import urllib.request
-    import json
-    import time
-    
+    from fastapi.responses import StreamingResponse
+    import tempfile, pathlib
+
+    out_dir = pathlib.Path(tempfile.mkdtemp())
     try:
-        osFormat = 'mp3' if format == 'mp3' else quality if quality != '720' else '720'
-        init_url = f"https://p.oceansaver.in/ajax/download.php?copyright=0&format={osFormat}&url={urllib.parse.quote(url)}"
-        
-        req = urllib.request.Request(init_url, headers={'User-Agent': 'Mozilla/5.0'})
-        res = urllib.request.urlopen(req, timeout=10)
-        data = json.loads(res.read().decode())
-        
-        if not data.get("success"):
-            raise HTTPException(400, "Invalid URL or format not supported by Oceansaver.")
-            
-        task_id = data.get("id")
-        download_url = None
-        
-        # Poll for progress (max 30 iterations * 2s = 60s)
-        for i in range(30):
-            time.sleep(2.0)
-            prog_url = f"https://p.oceansaver.in/ajax/progress.php?id={task_id}"
-            prog_req = urllib.request.Request(prog_url, headers={'User-Agent': 'Mozilla/5.0'})
-            prog_res = urllib.request.urlopen(prog_req, timeout=10)
-            prog_data = json.loads(prog_res.read().decode())
-            
-            if prog_data.get("success") and prog_data.get("progress") == 1000 and prog_data.get("download_url"):
-                download_url = prog_data.get("download_url")
-                break
-                
-        if download_url:
-            from fastapi.responses import StreamingResponse
-            
-            def iter_file():
-                video_req = urllib.request.Request(download_url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(video_req) as video_res:
-                    while True:
-                        chunk = video_res.read(1024 * 64)
-                        if not chunk:
-                            break
-                        yield chunk
-            
-            media_type = "audio/mpeg" if format == "mp3" else "video/mp4"
-            import urllib.parse
-            import time
-            safe_filename = f"video_{int(time.time())}.{'mp3' if format == 'mp3' else 'mp4'}"
-            
-            return StreamingResponse(
-                iter_file(),
-                media_type=media_type,
-                headers={
-                    "Content-Disposition": f"attachment; filename*=utf-8''{safe_filename}",
-                    "X-Filename": safe_filename
-                }
-            )
+        if format == "mp3":
+            fmt = "bestaudio/best"
+            pp = [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}]
+            merge = {}
         else:
-            raise HTTPException(500, "Download timed out. The video might be too long.")
-            
+            fmt = f"bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={quality}]+bestaudio/best[height<={quality}]"
+            pp = []
+            merge = {"merge_output_format": "mp4"}
+
+        ydl_opts = {
+            "format": fmt,
+            "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
+            "noplaylist": True,
+            "quiet": True,
+            "no_warnings": True,
+            # Use exported YouTube cookies for account auth
+            "cookiefile": "/app/cookies.txt",
+            # bgutil-ytdlp-pot-provider plugin running on port 4416 handles PO tokens
+            # automatically — no manual configuration needed
+            "extractor_args": {
+                "youtube": ["player_client=web"]
+            },
+            **merge,
+        }
+        if pp:
+            ydl_opts["postprocessors"] = pp
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+
+        files = list(out_dir.iterdir())
+        if not files:
+            raise HTTPException(500, "yt-dlp produced no output file.")
+
+        out_file = files[0]
+        ext = "mp3" if format == "mp3" else "mp4"
+        safe_filename = urllib.parse.quote(out_file.name)
+        media_type = "audio/mpeg" if format == "mp3" else "video/mp4"
+
+        def stream_file():
+            with open(out_file, "rb") as f:
+                while True:
+                    chunk = f.read(65536)
+                    if not chunk:
+                        break
+                    yield chunk
+            # cleanup after streaming
+            try:
+                import shutil
+                shutil.rmtree(out_dir, ignore_errors=True)
+            except Exception:
+                pass
+
+        return StreamingResponse(
+            stream_file(),
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f"attachment; filename*=utf-8''{safe_filename}",
+                "X-Filename": safe_filename,
+            }
+        )
+
+    except HTTPException:
+        raise
     except Exception as e:
+        try:
+            import shutil
+            shutil.rmtree(out_dir, ignore_errors=True)
+        except Exception:
+            pass
         raise HTTPException(500, str(e))
 
 
