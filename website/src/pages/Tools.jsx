@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Download, Scissors, Film, Image, FileText,
-  QrCode, Eye, Music, Mic2, Wand2, Minimize, Palette, Type, ArrowRight, Search
+  QrCode, Eye, Music, Mic2, Wand2, Minimize, Minimize2, Palette, Type, ArrowRight, Search, RefreshCw
 } from 'lucide-react'
 
 export const allTools = [
@@ -19,6 +19,8 @@ export const allTools = [
   { to: '/palette', icon: Palette, label: 'Color Palette Extractor', desc: 'Upload a picture and instantly get its 6 dominant colors.', color: '#ec4899' },
   { to: '/pdf', icon: FileText, label: 'PDF Toolkit', desc: 'Merge, split, and compress PDF files with ease.', color: '#f59e0b' },
   { to: '/qr', icon: QrCode, label: 'QR Code', desc: 'Generate beautiful QR codes or scan and decode any QR instantly.', color: '#06b6d4' },
+  { to: '/compress-image', icon: Minimize2, label: 'Image Compressor', desc: 'Compress JPEG, PNG & WebP images instantly in your browser.', color: '#0ea5e9' },
+  { to: '/convert-image', icon: RefreshCw, label: 'Image Format Converter', desc: 'Convert images between PNG, JPEG, and WebP instantly.', color: '#8b5cf6' },
   { to: '/subtitles', icon: Type, label: 'Subtitle Extractor', desc: 'Download captions directly from YouTube videos as .srt files.', color: '#f97316' },
 ]
 

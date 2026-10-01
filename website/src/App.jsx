@@ -14,6 +14,8 @@ import Cartoonifier from './pages/Cartoonifier'
 import VideoCompressor from './pages/VideoCompressor'
 import ColorPalette from './pages/ColorPalette'
 import SubtitleExtractor from './pages/SubtitleExtractor'
+import ImageCompressor from './pages/ImageCompressor'
+import ImageConverter from './pages/ImageConverter'
 import Tools from './pages/Tools'
 
 export default function App() {
@@ -35,6 +37,8 @@ export default function App() {
         <Route path="/compress-video" element={<VideoCompressor />} />
         <Route path="/palette" element={<ColorPalette />} />
         <Route path="/subtitles" element={<SubtitleExtractor />} />
+        <Route path="/compress-image" element={<ImageCompressor />} />
+        <Route path="/convert-image" element={<ImageConverter />} />
         <Route path="/tools" element={<Tools />} />
       </Routes>
     </>
