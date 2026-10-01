@@ -8,6 +8,7 @@ soundfile
 numpy
 pypdf
 Pillow
-rembg
+rembg[cpu]
+onnxruntime
 aiofiles
 apify-client
