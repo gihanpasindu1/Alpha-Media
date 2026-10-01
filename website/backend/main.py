@@ -695,5 +695,37 @@ async def extract_subtitles(url: str = Form(...)):
         cleanup(out_dir)
         raise HTTPException(500, str(e))
 
+# ─────────────────────────────── BACKGROUND REMOVER (REMBG) ─────────────────────────
+
+from rembg import remove
+
+@app.post("/api/bg-remove")
+async def bg_remove(file: UploadFile = File(...)):
+    in_path = temp_path(Path(file.filename).suffix or ".jpg")
+    out_path = temp_path(".png")
+    try:
+        async with aiofiles.open(in_path, "wb") as f:
+            await f.write(await file.read())
+            
+        with open(in_path, 'rb') as i:
+            with open(out_path, 'wb') as o:
+                input_data = i.read()
+                output_data = remove(input_data)
+                o.write(output_data)
+                
+        content = out_path.read_bytes()
+        from fastapi.responses import Response
+        return Response(
+            content=content,
+            media_type="image/png",
+            headers={
+                "Content-Disposition": 'attachment; filename="bg_removed.png"',
+                "X-Filename": "bg_removed.png"
+            }
+        )
+    finally:
+        cleanup(in_path, out_path)
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
