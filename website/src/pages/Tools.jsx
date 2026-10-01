@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Download, Scissors, Film, Image, FileText,
-  QrCode, Eye, Music, Mic2, Wand2, Minimize, Minimize2, Palette, Type, ArrowRight, Search, RefreshCw
+  QrCode, Eye, Music, Mic2, Wand2, Minimize, Minimize2, Palette, Type, ArrowRight, Search, RefreshCw, Smile
 } from 'lucide-react'
 
 export const allTools = [
@@ -21,6 +21,8 @@ export const allTools = [
   { to: '/qr', icon: QrCode, label: 'QR Code', desc: 'Generate beautiful QR codes or scan and decode any QR instantly.', color: '#06b6d4' },
   { to: '/compress-image', icon: Minimize2, label: 'Image Compressor', desc: 'Compress JPEG, PNG & WebP images instantly in your browser.', color: '#0ea5e9' },
   { to: '/convert-image', icon: RefreshCw, label: 'Image Format Converter', desc: 'Convert images between PNG, JPEG, and WebP instantly.', color: '#8b5cf6' },
+  { to: '/meme', icon: Smile, label: 'Meme Generator', desc: 'Add classic top and bottom text to any image to create memes instantly.', color: '#ef4444' },
+  { to: '/ocr', icon: FileText, label: 'Image to Text (OCR)', desc: 'Extract text from any image (screenshots, documents) using AI.', color: '#14b8a6' },
   { to: '/subtitles', icon: Type, label: 'Subtitle Extractor', desc: 'Download captions directly from YouTube videos as .srt files.', color: '#f97316' },
 ]
 

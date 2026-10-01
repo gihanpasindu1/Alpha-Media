@@ -16,6 +16,8 @@ import ColorPalette from './pages/ColorPalette'
 import SubtitleExtractor from './pages/SubtitleExtractor'
 import ImageCompressor from './pages/ImageCompressor'
 import ImageConverter from './pages/ImageConverter'
+import MemeGenerator from './pages/MemeGenerator'
+import ImageToText from './pages/ImageToText'
 import Tools from './pages/Tools'
 
 export default function App() {
@@ -39,6 +41,8 @@ export default function App() {
         <Route path="/subtitles" element={<SubtitleExtractor />} />
         <Route path="/compress-image" element={<ImageCompressor />} />
         <Route path="/convert-image" element={<ImageConverter />} />
+        <Route path="/meme" element={<MemeGenerator />} />
+        <Route path="/ocr" element={<ImageToText />} />
         <Route path="/tools" element={<Tools />} />
       </Routes>
     </>
