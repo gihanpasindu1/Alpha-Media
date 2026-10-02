@@ -330,34 +330,24 @@ async def face_blur(
         import urllib.request
         model_dir = Path("models")
         model_dir.mkdir(exist_ok=True)
-        prototxt = model_dir / "deploy.prototxt"
-        caffemodel = model_dir / "res10_300x300_ssd_iter_140000.caffemodel"
+        yunet_path = model_dir / "face_detection_yunet_2023mar.onnx"
         
-        if not prototxt.exists():
-            urllib.request.urlretrieve("https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt", str(prototxt))
-        if not caffemodel.exists():
-            urllib.request.urlretrieve("https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel", str(caffemodel))
+        if not yunet_path.exists():
+            urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx", str(yunet_path))
 
-        net = cv2.dnn.readNetFromCaffe(str(prototxt), str(caffemodel))
         k = max(intensity | 1, 3)
 
-        def blur_faces(img):
-            h, w = img.shape[:2]
-            blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
-            net.setInput(blob)
-            detections = net.forward()
-            for i in range(detections.shape[2]):
-                confidence = detections[0, 0, i, 2]
-                if confidence > 0.5:
-                    box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-                    (startX, startY, endX, endY) = box.astype("int")
+        def blur_faces(img, detector):
+            faces = detector.detect(img)
+            if faces[1] is not None:
+                h, w = img.shape[:2]
+                for face in faces[1]:
+                    x, y, fw, fh = face[0:4].astype(int)
                     
-                    fw = endX - startX
-                    fh = endY - startY
-                    startX = max(0, startX - int(fw * 0.1))
-                    startY = max(0, startY - int(fh * 0.1))
-                    endX = min(w, endX + int(fw * 0.1))
-                    endY = min(h, endY + int(fh * 0.1))
+                    startX = max(0, x - int(fw * 0.1))
+                    startY = max(0, y - int(fh * 0.1))
+                    endX = min(w, x + fw + int(fw * 0.1))
+                    endY = min(h, y + fh + int(fh * 0.1))
                     
                     if endX > startX and endY > startY:
                         roi = img[startY:endY, startX:endX]
@@ -368,7 +358,10 @@ async def face_blur(
             # Handle Image
             img = cv2.imread(str(in_path))
             if img is None: raise HTTPException(400, "Invalid image")
-            img = blur_faces(img)
+            
+            h, w = img.shape[:2]
+            detector = cv2.FaceDetectorYN.create(str(yunet_path), "", (w, h), score_threshold=0.5, nms_threshold=0.3)
+            img = blur_faces(img, detector)
             cv2.imwrite(str(out_path), img)
             
             content = out_path.read_bytes()
@@ -388,11 +381,12 @@ async def face_blur(
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             
             out = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
+            detector = cv2.FaceDetectorYN.create(str(yunet_path), "", (width, height), score_threshold=0.5, nms_threshold=0.3)
             
             while True:
                 ret, frame = cap.read()
                 if not ret: break
-                frame = blur_faces(frame)
+                frame = blur_faces(frame, detector)
                 out.write(frame)
                 
             cap.release()
