@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Link as LinkIcon, Copy } from 'lucide-react'
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export default function UrlShortener() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -17,7 +19,7 @@ export default function UrlShortener() {
     setShortUrl('')
 
     try {
-      const res = await fetch('/api/url/shorten', {
+      const res = await fetch(`${API}/api/url/shorten`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() })
@@ -29,7 +31,7 @@ export default function UrlShortener() {
 
       const data = await res.json()
       // Construct full URL pointing to our backend redirect route
-      const fullShortUrl = `${window.location.origin}/s/${data.short_id}`
+      const fullShortUrl = `${API}/s/${data.short_id}`
       setShortUrl(fullShortUrl)
     } catch (err) {
       setError(err.message)
