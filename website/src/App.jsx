@@ -10,7 +10,6 @@ import QrCode from './pages/QrCode'
 import FaceBlur from './pages/FaceBlur'
 import BpmDetector from './pages/BpmDetector'
 import VocalReducer from './pages/VocalReducer'
-import Cartoonifier from './pages/Cartoonifier'
 import VideoCompressor from './pages/VideoCompressor'
 import ColorPalette from './pages/ColorPalette'
 import SubtitleExtractor from './pages/SubtitleExtractor'
@@ -43,7 +42,6 @@ export default function App() {
           <Route path="/face-blur" element={<FaceBlur />} />
           <Route path="/bpm" element={<BpmDetector />} />
           <Route path="/vocal-reducer" element={<VocalReducer />} />
-          <Route path="/cartoonify" element={<Cartoonifier />} />
           <Route path="/compress-video" element={<VideoCompressor />} />
           <Route path="/palette" element={<ColorPalette />} />
           <Route path="/subtitles" element={<SubtitleExtractor />} />

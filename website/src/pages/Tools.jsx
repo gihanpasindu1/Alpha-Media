@@ -22,7 +22,6 @@ export const allTools = [
   { to: '/merge-videos',   icon: Merge,       label: 'Merge Videos',           desc: 'Join multiple videos into one continuous file.',     color: '#f5a623', category: 'video' },
   // Image
   { to: '/bg-remove',      icon: Image,       label: 'Background Remover',     desc: 'Remove image backgrounds with AI in your browser.',  color: '#3ecf8e', category: 'image' },
-  { to: '/cartoonify',     icon: Wand2,       label: 'Cartoonify Image',       desc: 'Turn photos into cartoon/comic sketches with AI.',   color: '#3ecf8e', category: 'image' },
   { to: '/face-blur',      icon: Eye,         label: 'AI Face Blur',           desc: 'Auto-detect and blur faces in photos or videos.',    color: '#3ecf8e', category: 'image' },
   { to: '/palette',        icon: Palette,     label: 'Color Palette Extractor',desc: 'Get the 6 dominant colors from any picture.',       color: '#3ecf8e', category: 'image' },
   { to: '/compress-image', icon: Minimize2,   label: 'Image Compressor',       desc: 'Compress JPEG, PNG & WebP images in your browser.', color: '#3ecf8e', category: 'image' },
