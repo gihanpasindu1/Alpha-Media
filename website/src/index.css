@@ -115,11 +115,11 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 22px;
+  padding: 12px 24px;
   border-radius: var(--radius-sm);
   border: none;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);

@@ -267,7 +267,7 @@ export default function Tools() {
           background: var(--surface);
           color: var(--text-muted);
           font-family: 'Space Grotesk', sans-serif;
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 500;
           cursor: pointer;
           transition: var(--transition);
@@ -343,14 +343,14 @@ export default function Tools() {
         }
         .tool-card-body { flex: 1; }
         .tool-card-body h3 {
-          font-size: 14px;
+          font-size: 16px;
           font-weight: 700;
           color: var(--text);
           margin-bottom: 6px;
           line-height: 1.3;
         }
         .tool-card-body p {
-          font-size: 12px;
+          font-size: 14px;
           color: var(--text-muted);
           line-height: 1.5;
         }

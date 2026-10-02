@@ -17,7 +17,7 @@ export default function Navbar() {
     <header className="navbar">
       <div className="navbar-inner container">
         <Link to="/" className="navbar-logo" style={{ display: 'flex', alignItems: 'center' }}>
-          <img src="/logo.png" alt="AlphaMedia" height="32" style={{ objectFit: 'contain' }} />
+          <img src="/logo.png" alt="AlphaMedia" height="46" style={{ objectFit: 'contain' }} />
         </Link>
 
         <nav className="navbar-links">

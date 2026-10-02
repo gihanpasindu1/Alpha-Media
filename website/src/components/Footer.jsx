@@ -10,7 +10,7 @@ export default function Footer() {
       <div className="container footer-inner">
         <div className="footer-left">
           <Link to="/" className="footer-logo">
-            <img src="/logo.png" alt="AlphaMedia" height="28" />
+            <img src="/logo.png" alt="AlphaMedia" height="38" />
           </Link>
           <p className="footer-desc">
             The Ultimate Free Multimedia Toolkit. Professional-grade processing right in your browser.
