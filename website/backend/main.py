@@ -327,34 +327,48 @@ async def face_blur(
         async with aiofiles.open(in_path, "wb") as f:
             await f.write(await file.read())
 
-        import mediapipe as mp
-        mp_face_detection = mp.solutions.face_detection
+        import urllib.request
+        model_dir = Path("models")
+        model_dir.mkdir(exist_ok=True)
+        prototxt = model_dir / "deploy.prototxt"
+        caffemodel = model_dir / "res10_300x300_ssd_iter_140000.caffemodel"
+        
+        if not prototxt.exists():
+            urllib.request.urlretrieve("https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt", str(prototxt))
+        if not caffemodel.exists():
+            urllib.request.urlretrieve("https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel", str(caffemodel))
+
+        net = cv2.dnn.readNetFromCaffe(str(prototxt), str(caffemodel))
         k = max(intensity | 1, 3)
+
+        def blur_faces(img):
+            h, w = img.shape[:2]
+            blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
+            net.setInput(blob)
+            detections = net.forward()
+            for i in range(detections.shape[2]):
+                confidence = detections[0, 0, i, 2]
+                if confidence > 0.5:
+                    box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+                    (startX, startY, endX, endY) = box.astype("int")
+                    
+                    fw = endX - startX
+                    fh = endY - startY
+                    startX = max(0, startX - int(fw * 0.1))
+                    startY = max(0, startY - int(fh * 0.1))
+                    endX = min(w, endX + int(fw * 0.1))
+                    endY = min(h, endY + int(fh * 0.1))
+                    
+                    if endX > startX and endY > startY:
+                        roi = img[startY:endY, startX:endX]
+                        img[startY:endY, startX:endX] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+            return img
 
         if not is_video:
             # Handle Image
             img = cv2.imread(str(in_path))
             if img is None: raise HTTPException(400, "Invalid image")
-            
-            with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
-                results = face_detection.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-                if results.detections:
-                    h, w, _ = img.shape
-                    for detection in results.detections:
-                        bboxC = detection.location_data.relative_bounding_box
-                        x, y = int(bboxC.xmin * w), int(bboxC.ymin * h)
-                        fw, fh = int(bboxC.width * w), int(bboxC.height * h)
-                        
-                        # Expand bbox slightly for a natural look
-                        x = max(0, x - int(fw * 0.1))
-                        y = max(0, y - int(fh * 0.1))
-                        fw = min(w - x, int(fw * 1.2))
-                        fh = min(h - y, int(fh * 1.2))
-                        
-                        if fw > 0 and fh > 0:
-                            roi = img[y:y+fh, x:x+fw]
-                            img[y:y+fh, x:x+fw] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
-                            
+            img = blur_faces(img)
             cv2.imwrite(str(out_path), img)
             
             content = out_path.read_bytes()
@@ -375,27 +389,11 @@ async def face_blur(
             
             out = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
             
-            with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
-                while True:
-                    ret, frame = cap.read()
-                    if not ret: break
-                    
-                    results = face_detection.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                    if results.detections:
-                        for detection in results.detections:
-                            bboxC = detection.location_data.relative_bounding_box
-                            x, y = int(bboxC.xmin * width), int(bboxC.ymin * height)
-                            fw, fh = int(bboxC.width * width), int(bboxC.height * height)
-                            
-                            x = max(0, x - int(fw * 0.1))
-                            y = max(0, y - int(fh * 0.1))
-                            fw = min(width - x, int(fw * 1.2))
-                            fh = min(height - y, int(fh * 1.2))
-                            
-                            if fw > 0 and fh > 0:
-                                roi = frame[y:y+fh, x:x+fw]
-                                frame[y:y+fh, x:x+fw] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
-                    out.write(frame)
+            while True:
+                ret, frame = cap.read()
+                if not ret: break
+                frame = blur_faces(frame)
+                out.write(frame)
                 
             cap.release()
             out.release()
