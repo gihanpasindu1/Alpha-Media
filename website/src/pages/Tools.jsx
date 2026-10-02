@@ -260,14 +260,14 @@ export default function Tools() {
         .cat-tab {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          padding: 7px 14px;
-          border-radius: 8px;
+          gap: 8px;
+          padding: 10px 18px;
+          border-radius: 10px;
           border: 1px solid var(--border);
           background: var(--surface);
           color: var(--text-muted);
           font-family: 'Space Grotesk', sans-serif;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
           cursor: pointer;
           transition: var(--transition);
@@ -275,7 +275,7 @@ export default function Tools() {
         .cat-tab:hover {
           color: var(--text);
           background: var(--surface2);
-          border-color: rgba(255,255,255,0.1);
+          border-color: rgba(255,255,255,0.15);
         }
         .cat-tab-active {
           background: rgba(245,166,35,0.1) !important;
@@ -283,10 +283,10 @@ export default function Tools() {
           color: var(--accent) !important;
         }
         .cat-count {
-          background: rgba(255,255,255,0.06);
-          padding: 1px 7px;
+          background: rgba(255,255,255,0.08);
+          padding: 2px 8px;
           border-radius: 99px;
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 600;
         }
         .cat-tab-active .cat-count {
