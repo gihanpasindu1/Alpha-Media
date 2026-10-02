@@ -64,7 +64,7 @@ export default function FaceBlur() {
     <main className="tool-page">
       <div className="container">
         <motion.div className="tool-header" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1><span className="glow-text">Face Blur (Photos & Videos)</span></h1>
+          <h1><span className="glow-text">AI Face Blur (Multi-Face Tracking)</span></h1>
           <p>Automatically detect and blur all faces in a photo or video to protect privacy.</p>
         </motion.div>
 
