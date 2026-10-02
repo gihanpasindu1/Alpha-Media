@@ -2,6 +2,8 @@ fastapi
 uvicorn[standard]
 python-multipart
 yt-dlp
+yt-dlp-get-pot
+bgutil-ytdlp-pot-provider
 opencv-python-headless<5.0
 librosa
 soundfile

@@ -80,12 +80,10 @@ async def download_video(
             "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
-            # Use exported YouTube cookies for account auth
-            "cookiefile": "/app/cookies.txt",
-            # bgutil-ytdlp-pot-provider plugin running on port 4416 handles PO tokens
-            # automatically — no manual configuration needed
+            # bgutil-ytdlp-pot-provider auto-fetches PO tokens from the server on port 4416
             "extractor_args": {
-                "youtube": ["player_client=web"]
+                "youtube": ["player_client=web"],
+                "youtubepot-bgutil-httpserver": ["base_url=http://localhost:4416"]
             },
             **merge,
         }
@@ -237,9 +235,9 @@ async def trim_video_from_url(
             "merge_output_format": "mp4",
             "download_ranges": yt_dlp.utils.download_range_func(None, [(start_sec, end_sec)]),
             "force_keyframes_at_cuts": True,
-            "cookiefile": "/app/cookies.txt",
             "extractor_args": {
-                "youtube": ["player_client=web"]
+                "youtube": ["player_client=web"],
+                "youtubepot-bgutil-httpserver": ["base_url=http://localhost:4416"]
             },
         }
 
@@ -677,9 +675,9 @@ async def extract_subtitles(url: str = Form(...)):
             "subtitlesformat": "srt",
             "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
             "quiet": True,
-            "cookiefile": "/app/cookies.txt",
             "extractor_args": {
-                "youtube": ["player_client=web"]
+                "youtube": ["player_client=web"],
+                "youtubepot-bgutil-httpserver": ["base_url=http://localhost:4416"]
             },
         }
         
