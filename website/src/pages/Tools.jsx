@@ -190,7 +190,7 @@ export default function Tools() {
           display: flex;
           align-items: center;
           gap: 12px;
-          color: #fff;
+          color: var(--text);
         }
         .tools-page-header p { color: var(--text-muted); font-size: 14px; margin-top: 6px; }
         .tools-count-badge {
