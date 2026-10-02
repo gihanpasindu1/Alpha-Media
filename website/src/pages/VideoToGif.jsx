@@ -78,7 +78,7 @@ export default function VideoToGif() {
             <div className="form-group">
               <label>Frame Rate (FPS): {fps}</label>
               <input type="range" min="5" max="30" value={fps} onChange={e => setFps(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent)' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)' }}><span>5 (smooth size)</span><span>30 (high quality)</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)' }}><span>5 (small size)</span><span>30 (high quality)</span></div>
             </div>
             <div className="form-group">
               <label>Width: {width}px</label>

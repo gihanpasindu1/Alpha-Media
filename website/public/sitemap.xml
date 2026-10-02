@@ -9,7 +9,19 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/download</loc>
+    <loc>https://alphamedia.cyou/add-subtitles</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/audio-convert</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/audio-merge</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/audio-trim</loc>
     <priority>0.8</priority>
   </url>
   <url>
@@ -17,11 +29,119 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://alphamedia.cyou/bpm</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/compress-image</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/compress-video</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/convert-image</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/download</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://alphamedia.cyou/face-blur</loc>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://alphamedia.cyou/gif</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/image-to-pdf</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/json-formatter</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/meme</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/merge-videos</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/noise-remover</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/ocr</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/palette</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/password-generator</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://alphamedia.cyou/pdf</loc>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/pdf-compress</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/pdf-to-images</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/qr</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/remove-watermark</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/screen-record</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/subtitles</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/trim</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/tts</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/url-shortener</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/video-speed</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/video-to-mp3</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/vocal-reducer</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/word-to-pdf</loc>
+    <priority>0.8</priority>
   </url>
 </urlset>

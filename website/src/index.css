@@ -46,10 +46,10 @@
   --border:       rgba(0,0,0,0.08);
   --border-hover: rgba(5,150,105,0.4);
 
-  --accent:      #059669;
-  --accent-dim:  #047857;
-  --accent-glow: rgba(5,150,105,0.18);
-  --accent2:     #34d399;
+  --accent:      #f5a623;
+  --accent-dim:  #e09612;
+  --accent-glow: rgba(245, 166, 35, 0.15);
+  --accent2:     #ffcc5c;
 
   --text:       #0d1f1a;
   --text-muted: #4a7a6d;
@@ -60,6 +60,12 @@
 
   --navbar-bg:   rgba(240,253,249,0.95);
   --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+/* Fix for white logo in light mode (turns white to black, keeps orange orange) */
+[data-theme="light"] .navbar-logo img,
+[data-theme="light"] .footer-logo img {
+  filter: invert(1) hue-rotate(180deg);
 }
 
 /* ═══════════════════════════════════════════════════════════

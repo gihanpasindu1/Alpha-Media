@@ -59,12 +59,13 @@ export const allTools = [
 ]
 
 const CATEGORIES = [
-  { id: 'all',     label: 'All Tools',  icon: null },
-  { id: 'video',   label: 'Video',      icon: Video },
-  { id: 'image',   label: 'Image & AI', icon: ImageIcon },
-  { id: 'audio',   label: 'Audio',      icon: AudioLines },
-  { id: 'utility', label: 'Document',   icon: FileStack },
-  { id: 'live',    label: 'Live',       icon: Radio },
+  { id: 'all',      label: 'All Tools',  icon: null },
+  { id: 'video',    label: 'Video',      icon: Video },
+  { id: 'image',    label: 'Image & AI', icon: ImageIcon },
+  { id: 'audio',    label: 'Audio',      icon: AudioLines },
+  { id: 'document', label: 'Document',   icon: FileStack },
+  { id: 'utility',  label: 'Utility',    icon: Settings },
+  { id: 'live',     label: 'Live',       icon: Radio },
 ]
 
 const fadeUp = {

@@ -5,7 +5,7 @@ import QRCode from 'qrcode'
 import jsQR from 'jsqr'
 
 function GenerateTab() {
-  const [text, setText] = useState('https://alphamedia.app')
+  const [text, setText] = useState('https://alphamedia.cyou')
   const [color, setColor] = useState('#6378ff')
   const [bgColor, setBgColor] = useState('#ffffff')
   const [size, setSize] = useState(300)

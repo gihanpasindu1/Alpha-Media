@@ -25,7 +25,7 @@ export default function PdfCompressor() {
             <input type="file" onChange={(e) => setFile(e.target.files[0])} style={{ display: 'none' }} id="file-upload" />
             <label htmlFor="file-upload" style={{ cursor: 'pointer', display: 'block' }}>
               <div className="dropzone-icon"><Upload size={32} /></div>
-              <h3>{'{file ? file.name : "Click to browse or drag file here"}'}</h3>
+              <h3>{file ? file.name : "Click to browse or drag file here"}</h3>
             </label>
           </div>
           
