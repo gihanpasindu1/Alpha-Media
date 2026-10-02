@@ -4,5 +4,7 @@ aptPkgs = [
   "tesseract-ocr",
   "tesseract-ocr-eng",
   "tesseract-ocr-sin",
-  "poppler-utils"
+  "poppler-utils",
+  "libgl1-mesa-glx",
+  "libglib2.0-0"
 ]
