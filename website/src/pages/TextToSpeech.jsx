@@ -1,37 +1,76 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Upload, Settings, Shield, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Mic, Play } from 'lucide-react'
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function TextToSpeech() {
-  const [file, setFile] = useState(null)
-  const [status, setStatus] = useState('')
+  const [text, setText] = useState('')
+  const [lang, setLang] = useState('en')
+  const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+
+  const handleConvert = async () => {
+    if (!text.trim()) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang })
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const blob = await res.blob()
+      setResult(URL.createObjectURL(blob))
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <main className="tool-page">
-      <div className="container">
+      <div className="container" style={{ maxWidth: 600 }}>
         <Link to="/tools" className="btn btn-secondary" style={{ marginBottom: 24 }}>
           <ArrowLeft size={16} /> Back to Tools
         </Link>
-        
         <div className="tool-header">
           <h1><span className="glow-text">Text to Speech</span></h1>
-          <p>Convert text into high-quality speech.</p>
+          <p>Convert written text into natural spoken audio.</p>
         </div>
-
         <div className="tool-card">
-          <h2><Upload size={18} /> Upload File</h2>
-          <div className="dropzone">
-            <input type="file" onChange={(e) => setFile(e.target.files[0])} style={{ display: 'none' }} id="file-upload" />
-            <label htmlFor="file-upload" style={{ cursor: 'pointer', display: 'block' }}>
-              <div className="dropzone-icon"><Upload size={32} /></div>
-              <h3>{file ? file.name : "Click to browse or drag file here"}</h3>
-            </label>
+          <textarea 
+            value={text} 
+            onChange={e => setText(e.target.value)} 
+            placeholder="Type or paste text here..." 
+            style={{ width: '100%', height: 150, padding: 12, borderRadius: 8, background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', marginBottom: 16 }}
+          />
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', marginBottom: 8 }}>Language:</label>
+            <select value={lang} onChange={e => setLang(e.target.value)} style={{ width: '100%', padding: 12, borderRadius: 8, background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)' }}>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+            </select>
           </div>
+          <button className="btn btn-primary" onClick={handleConvert} disabled={loading || !text} style={{ width: '100%', justifyContent: 'center' }}>
+            <Mic size={18} /> {loading ? 'Converting...' : 'Generate Speech'}
+          </button>
           
-          <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary">Process File</button>
-          </div>
+          {error && <div style={{ marginTop: 16, color: 'var(--error)' }}>{error}</div>}
+          
+          {result && (
+            <div style={{ marginTop: 24, background: 'var(--bg2)', padding: 20, borderRadius: 8 }}>
+              <h3 style={{ marginBottom: 12 }}>Result:</h3>
+              <audio controls src={result} style={{ width: '100%' }} />
+              <a href={result} download="speech.mp3" className="btn btn-primary" style={{ marginTop: 12, width: '100%', justifyContent: 'center' }}>Download MP3</a>
+            </div>
+          )}
         </div>
       </div>
     </main>
