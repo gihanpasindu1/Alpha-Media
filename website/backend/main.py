@@ -327,18 +327,34 @@ async def face_blur(
         async with aiofiles.open(in_path, "wb") as f:
             await f.write(await file.read())
 
-        cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+        import mediapipe as mp
+        mp_face_detection = mp.solutions.face_detection
         k = max(intensity | 1, 3)
 
         if not is_video:
             # Handle Image
             img = cv2.imread(str(in_path))
             if img is None: raise HTTPException(400, "Invalid image")
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            faces = cascade.detectMultiScale(gray, 1.1, 4)
-            for (x, y, w, h) in faces:
-                roi = img[y:y+h, x:x+w]
-                img[y:y+h, x:x+w] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+            
+            with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
+                results = face_detection.process(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                if results.detections:
+                    h, w, _ = img.shape
+                    for detection in results.detections:
+                        bboxC = detection.location_data.relative_bounding_box
+                        x, y = int(bboxC.xmin * w), int(bboxC.ymin * h)
+                        fw, fh = int(bboxC.width * w), int(bboxC.height * h)
+                        
+                        # Expand bbox slightly for a natural look
+                        x = max(0, x - int(fw * 0.1))
+                        y = max(0, y - int(fh * 0.1))
+                        fw = min(w - x, int(fw * 1.2))
+                        fh = min(h - y, int(fh * 1.2))
+                        
+                        if fw > 0 and fh > 0:
+                            roi = img[y:y+fh, x:x+fw]
+                            img[y:y+fh, x:x+fw] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+                            
             cv2.imwrite(str(out_path), img)
             
             content = out_path.read_bytes()
@@ -359,18 +375,27 @@ async def face_blur(
             
             out = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
             
-            while True:
-                ret, frame = cap.read()
-                if not ret: break
-                
-                # To speed up, we can downscale for detection, but let's keep it simple
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                # minSize to ignore tiny false positives
-                faces = cascade.detectMultiScale(gray, 1.1, 4, minSize=(30, 30))
-                for (x, y, w, h) in faces:
-                    roi = frame[y:y+h, x:x+w]
-                    frame[y:y+h, x:x+w] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
-                out.write(frame)
+            with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
+                while True:
+                    ret, frame = cap.read()
+                    if not ret: break
+                    
+                    results = face_detection.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                    if results.detections:
+                        for detection in results.detections:
+                            bboxC = detection.location_data.relative_bounding_box
+                            x, y = int(bboxC.xmin * width), int(bboxC.ymin * height)
+                            fw, fh = int(bboxC.width * width), int(bboxC.height * height)
+                            
+                            x = max(0, x - int(fw * 0.1))
+                            y = max(0, y - int(fh * 0.1))
+                            fw = min(width - x, int(fw * 1.2))
+                            fh = min(height - y, int(fh * 1.2))
+                            
+                            if fw > 0 and fh > 0:
+                                roi = frame[y:y+fh, x:x+fw]
+                                frame[y:y+fh, x:x+fw] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+                    out.write(frame)
                 
             cap.release()
             out.release()

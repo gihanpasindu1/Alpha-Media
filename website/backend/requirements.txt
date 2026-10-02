@@ -12,3 +12,4 @@ rembg[cpu]
 onnxruntime
 aiofiles
 apify-client
+mediapipe
