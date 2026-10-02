@@ -26,17 +26,17 @@ export default function Footer() {
             <Link to="/tools">All Tools</Link>
           </div>
           <div className="footer-col">
-            <h4>Company</h4>
-            <a href="#">About Us</a>
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Contact</a>
+            <h4>Quick Links</h4>
+            <Link to="/password-generator">Password Generator</Link>
+            <Link to="/json-formatter">JSON Formatter</Link>
+            <Link to="/url-shortener">URL Shortener</Link>
+            <a href="mailto:contact@alphamedia.cyou">Contact Us</a>
           </div>
         </div>
       </div>
       
       <div className="footer-bottom container">
-        <p>&copy; {currentYear} Alpha developers. All rights reserved.</p>
+        <p>© {currentYear} Alpha developers. All rights reserved.</p>
       </div>
     </footer>
   )

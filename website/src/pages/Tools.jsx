@@ -13,7 +13,7 @@ export const allTools = [
   // Video
   { to: '/download',       icon: Download,    label: 'Video Downloader',       desc: 'Download from YouTube, TikTok, Instagram & more.',   color: '#f5a623', category: 'video' },
   { to: '/trim',           icon: Scissors,    label: 'Clip Trimmer',           desc: 'Cut a specific time range from any video.',          color: '#f5a623', category: 'video' },
-  { to: '/gif',            icon: Film,        label: 'Video → GIF',            desc: 'Convert any video clip into a high-quality GIF.',    color: '#f5a623', category: 'video' },
+  { to: '/gif',            icon: Film,        label: 'Video to GIF',           desc: 'Convert any video clip into a high-quality GIF.',    color: '#f5a623', category: 'video' },
   { to: '/compress-video', icon: Minimize,    label: 'Video Compressor',       desc: 'Reduce video file sizes without losing quality.',    color: '#f5a623', category: 'video' },
   { to: '/video-speed',    icon: FastForward, label: 'Video Speed Changer',    desc: 'Speed up or slow down any video. Audio adjusts too.', color: '#f5a623', category: 'video' },
   { to: '/video-to-mp3',   icon: Headphones,  label: 'Video to MP3',           desc: 'Extract high-quality audio from any video file.',    color: '#f5a623', category: 'video' },

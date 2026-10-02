@@ -3,9 +3,22 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(11, 14, 20, 0.92);
+  background: var(--bg);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Semi-transparent navbar background */
+@supports (backdrop-filter: blur(20px)) {
+  .navbar {
+    background: transparent;
+  }
+}
+[data-theme="dark"] .navbar {
+  background: rgba(11, 14, 20, 0.85);
+}
+[data-theme="light"] .navbar {
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .navbar-inner {

@@ -1,49 +1,53 @@
 import { Routes, Route } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
 import Navbar from './components/Navbar'
-import Home from './pages/Home'
-import VideoDownloader from './pages/VideoDownloader'
-import ClipTrimmer from './pages/ClipTrimmer'
-import VideoToGif from './pages/VideoToGif'
-import BackgroundRemover from './pages/BackgroundRemover'
-import PdfToolkit from './pages/PdfToolkit'
-import QrCode from './pages/QrCode'
-import FaceBlur from './pages/FaceBlur'
-import BpmDetector from './pages/BpmDetector'
-import VocalReducer from './pages/VocalReducer'
-import VideoCompressor from './pages/VideoCompressor'
-import ColorPalette from './pages/ColorPalette'
-import SubtitleExtractor from './pages/SubtitleExtractor'
-import ImageCompressor from './pages/ImageCompressor'
-import ImageConverter from './pages/ImageConverter'
-import MemeGenerator from './pages/MemeGenerator'
-import ImageToText from './pages/ImageToText'
-import ScreenRecorder from './pages/ScreenRecorder'
-import VideoToMp3 from './pages/VideoToMp3'
-import VideoSpeedChanger from './pages/VideoSpeedChanger'
-import RemoveWatermark from './pages/RemoveWatermark'
-import AddSubtitles from './pages/AddSubtitles'
-import MergeVideos from './pages/MergeVideos'
-import Tools from './pages/Tools'
-import AudioTrimmer from './pages/AudioTrimmer'
-import AudioMerger from './pages/AudioMerger'
-import NoiseRemover from './pages/NoiseRemover'
-import AudioConverter from './pages/AudioConverter'
-import TextToSpeech from './pages/TextToSpeech'
-import WordToPdf from './pages/WordToPdf'
-import ImageToPdf from './pages/ImageToPdf'
-import PdfCompressor from './pages/PdfCompressor'
-import PdfToImages from './pages/PdfToImages'
-import UrlShortener from './pages/UrlShortener'
-import PasswordGenerator from './pages/PasswordGenerator'
-import JsonFormatter from './pages/JsonFormatter'
 import Footer from './components/Footer'
+import Home from './pages/Home'
+import Tools from './pages/Tools'
+import NotFound from './pages/NotFound'
+
+const VideoDownloader = lazy(() => import('./pages/VideoDownloader'))
+const ClipTrimmer = lazy(() => import('./pages/ClipTrimmer'))
+const VideoToGif = lazy(() => import('./pages/VideoToGif'))
+const BackgroundRemover = lazy(() => import('./pages/BackgroundRemover'))
+const PdfToolkit = lazy(() => import('./pages/PdfToolkit'))
+const QrCode = lazy(() => import('./pages/QrCode'))
+const FaceBlur = lazy(() => import('./pages/FaceBlur'))
+const BpmDetector = lazy(() => import('./pages/BpmDetector'))
+const VocalReducer = lazy(() => import('./pages/VocalReducer'))
+const VideoCompressor = lazy(() => import('./pages/VideoCompressor'))
+const ColorPalette = lazy(() => import('./pages/ColorPalette'))
+const SubtitleExtractor = lazy(() => import('./pages/SubtitleExtractor'))
+const ImageCompressor = lazy(() => import('./pages/ImageCompressor'))
+const ImageConverter = lazy(() => import('./pages/ImageConverter'))
+const MemeGenerator = lazy(() => import('./pages/MemeGenerator'))
+const ImageToText = lazy(() => import('./pages/ImageToText'))
+const ScreenRecorder = lazy(() => import('./pages/ScreenRecorder'))
+const VideoToMp3 = lazy(() => import('./pages/VideoToMp3'))
+const VideoSpeedChanger = lazy(() => import('./pages/VideoSpeedChanger'))
+const RemoveWatermark = lazy(() => import('./pages/RemoveWatermark'))
+const AddSubtitles = lazy(() => import('./pages/AddSubtitles'))
+const MergeVideos = lazy(() => import('./pages/MergeVideos'))
+const AudioTrimmer = lazy(() => import('./pages/AudioTrimmer'))
+const AudioMerger = lazy(() => import('./pages/AudioMerger'))
+const NoiseRemover = lazy(() => import('./pages/NoiseRemover'))
+const AudioConverter = lazy(() => import('./pages/AudioConverter'))
+const TextToSpeech = lazy(() => import('./pages/TextToSpeech'))
+const WordToPdf = lazy(() => import('./pages/WordToPdf'))
+const ImageToPdf = lazy(() => import('./pages/ImageToPdf'))
+const PdfCompressor = lazy(() => import('./pages/PdfCompressor'))
+const PdfToImages = lazy(() => import('./pages/PdfToImages'))
+const UrlShortener = lazy(() => import('./pages/UrlShortener'))
+const PasswordGenerator = lazy(() => import('./pages/PasswordGenerator'))
+const JsonFormatter = lazy(() => import('./pages/JsonFormatter'))
 
 export default function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
       <div style={{ flex: 1 }}>
-        <Routes>
+        <Suspense fallback={<div style={{ padding: '100px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading tool...</div>}>
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/download" element={<VideoDownloader />} />
           <Route path="/trim" element={<ClipTrimmer />} />
@@ -80,8 +84,9 @@ export default function App() {
           <Route path="/url-shortener" element={<UrlShortener />} />
           <Route path="/password-generator" element={<PasswordGenerator />} />
           <Route path="/json-formatter" element={<JsonFormatter />} />
-
-        </Routes>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </div>
       <Footer />
     </div>
