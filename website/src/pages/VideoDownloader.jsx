@@ -58,7 +58,7 @@ export default function VideoDownloader() {
       <div className="container">
         <motion.div className="tool-header" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1><span className="glow-text">Video Downloader</span></h1>
-          <p>Download videos from YouTube, TikTok, Instagram, Twitter, and 1000+ sites.</p>
+          <p>Download videos from YouTube, TikTok, Instagram, X (Twitter), and 1000+ sites.</p>
         </motion.div>
 
         <motion.div className="tool-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
