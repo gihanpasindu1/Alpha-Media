@@ -16,11 +16,8 @@ export default function Navbar() {
   return (
     <header className="navbar">
       <div className="navbar-inner container">
-        <Link to="/" className="navbar-logo">
-          <div className="logo-icon">
-            <Zap size={16} fill="currentColor" />
-          </div>
-          <span>Alpha<strong>Media</strong></span>
+        <Link to="/" className="navbar-logo" style={{ display: 'flex', alignItems: 'center' }}>
+          <img src="/logo.png" alt="AlphaMedia" height="32" style={{ objectFit: 'contain' }} />
         </Link>
 
         <nav className="navbar-links">

@@ -25,38 +25,42 @@ import RemoveWatermark from './pages/RemoveWatermark'
 import AddSubtitles from './pages/AddSubtitles'
 import MergeVideos from './pages/MergeVideos'
 import Tools from './pages/Tools'
+import Footer from './components/Footer'
 
 export default function App() {
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/download" element={<VideoDownloader />} />
-        <Route path="/trim" element={<ClipTrimmer />} />
-        <Route path="/gif" element={<VideoToGif />} />
-        <Route path="/bg-remove" element={<BackgroundRemover />} />
-        <Route path="/pdf" element={<PdfToolkit />} />
-        <Route path="/qr" element={<QrCode />} />
-        <Route path="/face-blur" element={<FaceBlur />} />
-        <Route path="/bpm" element={<BpmDetector />} />
-        <Route path="/vocal-reducer" element={<VocalReducer />} />
-        <Route path="/cartoonify" element={<Cartoonifier />} />
-        <Route path="/compress-video" element={<VideoCompressor />} />
-        <Route path="/palette" element={<ColorPalette />} />
-        <Route path="/subtitles" element={<SubtitleExtractor />} />
-        <Route path="/compress-image" element={<ImageCompressor />} />
-        <Route path="/convert-image" element={<ImageConverter />} />
-        <Route path="/meme" element={<MemeGenerator />} />
-        <Route path="/ocr" element={<ImageToText />} />
-        <Route path="/screen-record" element={<ScreenRecorder />} />
-        <Route path="/video-to-mp3" element={<VideoToMp3 />} />
-        <Route path="/video-speed" element={<VideoSpeedChanger />} />
-        <Route path="/remove-watermark" element={<RemoveWatermark />} />
-        <Route path="/add-subtitles" element={<AddSubtitles />} />
-        <Route path="/merge-videos" element={<MergeVideos />} />
-        <Route path="/tools" element={<Tools />} />
-      </Routes>
-    </>
+      <div style={{ flex: 1 }}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/download" element={<VideoDownloader />} />
+          <Route path="/trim" element={<ClipTrimmer />} />
+          <Route path="/gif" element={<VideoToGif />} />
+          <Route path="/bg-remove" element={<BackgroundRemover />} />
+          <Route path="/pdf" element={<PdfToolkit />} />
+          <Route path="/qr" element={<QrCode />} />
+          <Route path="/face-blur" element={<FaceBlur />} />
+          <Route path="/bpm" element={<BpmDetector />} />
+          <Route path="/vocal-reducer" element={<VocalReducer />} />
+          <Route path="/cartoonify" element={<Cartoonifier />} />
+          <Route path="/compress-video" element={<VideoCompressor />} />
+          <Route path="/palette" element={<ColorPalette />} />
+          <Route path="/subtitles" element={<SubtitleExtractor />} />
+          <Route path="/compress-image" element={<ImageCompressor />} />
+          <Route path="/convert-image" element={<ImageConverter />} />
+          <Route path="/meme" element={<MemeGenerator />} />
+          <Route path="/ocr" element={<ImageToText />} />
+          <Route path="/screen-record" element={<ScreenRecorder />} />
+          <Route path="/video-to-mp3" element={<VideoToMp3 />} />
+          <Route path="/video-speed" element={<VideoSpeedChanger />} />
+          <Route path="/remove-watermark" element={<RemoveWatermark />} />
+          <Route path="/add-subtitles" element={<AddSubtitles />} />
+          <Route path="/merge-videos" element={<MergeVideos />} />
+          <Route path="/tools" element={<Tools />} />
+        </Routes>
+      </div>
+      <Footer />
+    </div>
   )
 }
