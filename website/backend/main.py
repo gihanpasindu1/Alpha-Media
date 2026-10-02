@@ -237,7 +237,10 @@ async def trim_video_from_url(
             "merge_output_format": "mp4",
             "download_ranges": yt_dlp.utils.download_range_func(None, [(start_sec, end_sec)]),
             "force_keyframes_at_cuts": True,
-            "extractor_args": {"youtube": ["client=ANDROID_TESTSUITE,IOS"]},
+            "cookiefile": "/app/cookies.txt",
+            "extractor_args": {
+                "youtube": ["player_client=web"]
+            },
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -657,8 +660,10 @@ async def extract_subtitles(url: str = Form(...)):
             "subtitlesformat": "srt",
             "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
             "quiet": True,
-            "cookiefile": "cookies.txt",
-            "extractor_args": {"youtube": ["client=ANDROID_TESTSUITE,IOS"]},
+            "cookiefile": "/app/cookies.txt",
+            "extractor_args": {
+                "youtube": ["player_client=web"]
+            },
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
