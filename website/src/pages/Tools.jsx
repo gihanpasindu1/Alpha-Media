@@ -297,14 +297,14 @@ export default function Tools() {
         /* Tools Grid */
         .tools-grid-page {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 14px;
         }
         .tool-card-item {
           display: flex;
-          align-items: center;
+          flex-direction: column;
           gap: 14px;
-          padding: 16px 18px;
+          padding: 24px 22px;
           background: var(--surface);
           border: 1px solid var(--border);
           border-radius: var(--radius);
@@ -313,45 +313,55 @@ export default function Tools() {
           transition: var(--transition);
           position: relative;
           overflow: hidden;
+          box-shadow: var(--card-shadow);
+          min-height: 160px;
+        }
+        .tool-card-item::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+          opacity: 0;
+          transition: var(--transition);
         }
         .tool-card-item:hover {
           background: var(--surface2);
-          border-color: rgba(245,166,35,0.25);
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+          border-color: var(--border-hover);
+          transform: translateY(-3px);
+          box-shadow: 0 12px 32px rgba(0,0,0,0.2);
         }
+        .tool-card-item:hover::before { opacity: 1; }
         .tool-card-icon {
-          width: 44px;
-          height: 44px;
-          border-radius: 10px;
+          width: 52px;
+          height: 52px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
         }
-        .tool-card-body { flex: 1; min-width: 0; }
+        .tool-card-body { flex: 1; }
         .tool-card-body h3 {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 700;
-          color: #fff;
-          margin-bottom: 3px;
+          color: var(--text);
+          margin-bottom: 6px;
+          line-height: 1.3;
         }
         .tool-card-body p {
           font-size: 12px;
           color: var(--text-muted);
-          line-height: 1.45;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          line-height: 1.5;
         }
         .tool-card-arrow {
           color: var(--text-dim);
-          flex-shrink: 0;
+          align-self: flex-end;
           transition: var(--transition);
         }
         .tool-card-item:hover .tool-card-arrow {
           color: var(--accent);
-          transform: translateX(3px);
+          transform: translateX(3px) translateY(-3px);
         }
 
         /* Empty State */

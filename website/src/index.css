@@ -1,39 +1,70 @@
 /* ── Alpha Media – Global Design System ── */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-:root {
-  /* Core Palette — Dark Navy + Amber Gold (inspired by AlphaRDP) */
-  --bg:        #0b0e14;
-  --bg2:       #0f1318;
-  --surface:   #141820;
-  --surface2:  #1a202e;
-  --surface3:  #212736;
-  --border:    rgba(255,255,255,0.07);
-  --border-hover: rgba(255,185,50,0.35);
+/* ═══════════════════════════════════════════════════════════
+   DARK THEME (default)  — Navy + Amber Gold
+═══════════════════════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+  --bg:           #0b0e14;
+  --bg2:          #0f1318;
+  --surface:      #141820;
+  --surface2:     #1a202e;
+  --surface3:     #212736;
+  --border:       rgba(255,255,255,0.07);
+  --border-hover: rgba(245,166,35,0.35);
 
-  /* Accent — Amber/Gold */
   --accent:      #f5a623;
   --accent-dim:  #c47d0e;
-  --accent-glow: rgba(245,166,35,0.25);
+  --accent-glow: rgba(245,166,35,0.22);
   --accent2:     #ffcc5c;
 
-  /* Text */
   --text:       #e8eaf2;
   --text-muted: #6b7591;
   --text-dim:   #3e4559;
 
-  /* Status */
   --success: #3ecf8e;
   --error:   #ff5c7c;
-  --warning: #f5a623;
 
-  /* UI */
+  --navbar-bg:     rgba(11,14,20,0.92);
+  --card-shadow:   0 6px 24px rgba(0,0,0,0.35);
+
   --radius:    14px;
   --radius-sm: 8px;
-  --radius-xs: 5px;
   --transition: 0.2s cubic-bezier(.4,0,.2,1);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   LIGHT THEME  — White + Emerald Green + Sky Blue
+═══════════════════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg:           #f0fdf9;
+  --bg2:          #e8faf5;
+  --surface:      #ffffff;
+  --surface2:     #f3faf7;
+  --surface3:     #e6f5f0;
+  --border:       rgba(0,0,0,0.08);
+  --border-hover: rgba(5,150,105,0.4);
+
+  --accent:      #059669;
+  --accent-dim:  #047857;
+  --accent-glow: rgba(5,150,105,0.18);
+  --accent2:     #34d399;
+
+  --text:       #0d1f1a;
+  --text-muted: #4a7a6d;
+  --text-dim:   #9abfb6;
+
+  --success: #059669;
+  --error:   #dc2626;
+
+  --navbar-bg:   rgba(240,253,249,0.95);
+  --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BASE RESET & BODY
+═══════════════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 
@@ -44,6 +75,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -67,18 +99,18 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Glass ── */
 .glass {
-  background: rgba(20, 24, 32, 0.85);
+  background: var(--surface);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
 /* ── Glow Text ── */
-.glow-text {
-  color: var(--accent);
-}
+.glow-text { color: var(--accent); }
 
-/* ── Buttons ── */
+/* ═══════════════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════════════ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -97,10 +129,11 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-primary {
   background: var(--accent);
-  color: #0b0e14;
+  color: #fff;
   font-weight: 700;
   box-shadow: 0 2px 16px var(--accent-glow);
 }
+[data-theme="dark"] .btn-primary { color: #0b0e14; }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent2);
@@ -116,16 +149,15 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--surface3);
-  border-color: rgba(255,185,50,0.2);
+  border-color: var(--border-hover);
   color: var(--accent);
 }
 
-.btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ── Input / Select ── */
+/* ═══════════════════════════════════════════════════════════
+   INPUT / SELECT
+═══════════════════════════════════════════════════════════ */
 .input {
   width: 100%;
   background: var(--surface2);
@@ -140,7 +172,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .input:focus {
-  border-color: rgba(245,166,35,0.5);
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-glow);
   background: var(--surface3);
 }
@@ -156,30 +188,24 @@ select.input {
   padding-right: 36px;
 }
 
-/* ── Dropzone ── */
+/* ═══════════════════════════════════════════════════════════
+   DROPZONE
+═══════════════════════════════════════════════════════════ */
 .dropzone {
-  border: 1.5px dashed rgba(255,255,255,0.1);
+  border: 1.5px dashed var(--border);
   border-radius: var(--radius);
   padding: 44px 24px;
   text-align: center;
   cursor: pointer;
   transition: var(--transition);
-  background: rgba(255,255,255,0.015);
+  background: rgba(0,0,0,0.01);
   position: relative;
   overflow: hidden;
 }
 
-.dropzone::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 70% 60% at 50% 100%, rgba(245,166,35,0.05), transparent);
-  pointer-events: none;
-}
-
 .dropzone:hover, .dropzone.active {
-  border-color: rgba(245,166,35,0.4);
-  background: rgba(245,166,35,0.04);
+  border-color: var(--accent);
+  background: var(--accent-glow);
 }
 
 .dropzone-icon {
@@ -190,10 +216,10 @@ select.input {
   opacity: 0.8;
 }
 
-/* ── Tool Page Layout ── */
-.tool-page {
-  padding: 36px 0 80px;
-}
+/* ═══════════════════════════════════════════════════════════
+   TOOL PAGE LAYOUT
+═══════════════════════════════════════════════════════════ */
+.tool-page { padding: 36px 0 80px; }
 
 .tool-header {
   margin-bottom: 32px;
@@ -222,6 +248,7 @@ select.input {
   margin-bottom: 20px;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--card-shadow);
 }
 
 .tool-card::before {
@@ -229,7 +256,7 @@ select.input {
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(245,166,35,0.2), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
 }
 
 .tool-card h2 {
@@ -238,7 +265,6 @@ select.input {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--text);
 }
 
 .form-row {
@@ -263,7 +289,9 @@ select.input {
   letter-spacing: 0.08em;
 }
 
-/* ── Status / Progress ── */
+/* ═══════════════════════════════════════════════════════════
+   STATUS BOXES
+═══════════════════════════════════════════════════════════ */
 .status-box {
   display: flex;
   align-items: center;
@@ -276,20 +304,20 @@ select.input {
 }
 
 .status-box.loading {
-  background: rgba(245,166,35,0.08);
-  border: 1px solid rgba(245,166,35,0.2);
-  color: var(--accent2);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  color: var(--accent);
 }
 
 .status-box.success {
   background: rgba(62,207,142,0.08);
-  border: 1px solid rgba(62,207,142,0.2);
+  border: 1px solid rgba(62,207,142,0.3);
   color: var(--success);
 }
 
 .status-box.error {
-  background: rgba(255,92,124,0.08);
-  border: 1px solid rgba(255,92,124,0.2);
+  background: rgba(220,38,38,0.08);
+  border: 1px solid rgba(220,38,38,0.3);
   color: var(--error);
 }
 
@@ -297,13 +325,12 @@ select.input {
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(245,166,35,0.2);
+  border: 2px solid var(--accent-glow);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
 }
-
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Badge ── */
@@ -314,13 +341,13 @@ select.input {
   border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(245,166,35,0.1);
+  background: var(--accent-glow);
   color: var(--accent);
-  border: 1px solid rgba(245,166,35,0.2);
+  border: 1px solid var(--border-hover);
   letter-spacing: 0.04em;
 }
 
-/* ── Image/Video Preview ── */
+/* ── Preview ── */
 .preview-container {
   margin-top: 18px;
   border-radius: var(--radius);
@@ -329,8 +356,7 @@ select.input {
   background: #000;
 }
 
-.preview-container img,
-.preview-container video {
+.preview-container img, .preview-container video {
   width: 100%;
   display: block;
   max-height: 400px;

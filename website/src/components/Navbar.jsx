@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, Menu, X, Grid3X3, ChevronRight } from 'lucide-react'
+import { Zap, Menu, X, Grid3X3, ChevronRight, Sun, Moon } from 'lucide-react'
+import { useTheme } from '../ThemeContext'
 import './Navbar.css'
 
 const links = [
@@ -10,6 +11,7 @@ const links = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
+  const { theme, toggle } = useTheme()
 
   return (
     <header className="navbar">
@@ -35,6 +37,26 @@ export default function Navbar() {
         </nav>
 
         <div className="navbar-right">
+          {/* Theme Toggle */}
+          <motion.button
+            className="theme-toggle"
+            onClick={toggle}
+            whileTap={{ scale: 0.9 }}
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={theme}
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+              >
+                {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+              </motion.div>
+            </AnimatePresence>
+          </motion.button>
+
           <Link to="/tools" className="btn-cta">
             Get Started <ChevronRight size={14} />
           </Link>
@@ -64,6 +86,10 @@ export default function Navbar() {
                 {label}
               </NavLink>
             ))}
+            <button className="mobile-theme-btn" onClick={toggle}>
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            </button>
             <Link to="/tools" className="mobile-cta" onClick={() => setOpen(false)}>
               Get Started →
             </Link>
