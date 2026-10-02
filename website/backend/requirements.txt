@@ -15,7 +15,7 @@ onnxruntime
 aiofiles
 apify-client
 noisereduce
-gTTS
+edge-tts
 python-docx
 reportlab
 pdf2image

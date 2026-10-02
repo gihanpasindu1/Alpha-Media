@@ -6,7 +6,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function TextToSpeech() {
   const [text, setText] = useState('')
-  const [lang, setLang] = useState('en')
+  const [lang, setLang] = useState('en-US-AriaNeural')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -49,13 +49,14 @@ export default function TextToSpeech() {
             style={{ width: '100%', height: 150, padding: 12, borderRadius: 8, background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', marginBottom: 16 }}
           />
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', marginBottom: 8 }}>Language:</label>
+            <label style={{ display: 'block', marginBottom: 8 }}>Voice (Natural AI):</label>
             <select value={lang} onChange={e => setLang(e.target.value)} style={{ width: '100%', padding: 12, borderRadius: 8, background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)' }}>
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="it">Italian</option>
+              <option value="en-US-AriaNeural">English - Aria (Female)</option>
+              <option value="en-US-GuyNeural">English - Guy (Male)</option>
+              <option value="en-US-JennyNeural">English - Jenny (Female)</option>
+              <option value="en-US-ChristopherNeural">English - Christopher (Male)</option>
+              <option value="en-GB-SoniaNeural">English (UK) - Sonia (Female)</option>
+              <option value="en-GB-RyanNeural">English (UK) - Ryan (Male)</option>
             </select>
           </div>
           <button className="btn btn-primary" onClick={handleConvert} disabled={loading || !text} style={{ width: '100%', justifyContent: 'center' }}>

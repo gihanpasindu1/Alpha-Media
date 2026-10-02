@@ -181,13 +181,13 @@ async def text_to_speech(
     req: TTSRequest,
     background_tasks: BackgroundTasks
 ):
-    from gtts import gTTS
+    import edge_tts
     req_id = str(uuid.uuid4())
     out_path = DATA_DIR / f"tts_{req_id}.mp3"
     
     try:
-        tts = gTTS(text=req.text, lang=req.lang, slow=False)
-        tts.save(str(out_path))
+        communicate = edge_tts.Communicate(req.text, req.lang)
+        await communicate.save(str(out_path))
     except Exception as e:
         raise HTTPException(500, str(e))
         
