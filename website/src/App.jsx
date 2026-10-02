@@ -24,6 +24,18 @@ import RemoveWatermark from './pages/RemoveWatermark'
 import AddSubtitles from './pages/AddSubtitles'
 import MergeVideos from './pages/MergeVideos'
 import Tools from './pages/Tools'
+import AudioTrimmer from './pages/AudioTrimmer'
+import AudioMerger from './pages/AudioMerger'
+import NoiseRemover from './pages/NoiseRemover'
+import AudioConverter from './pages/AudioConverter'
+import TextToSpeech from './pages/TextToSpeech'
+import WordToPdf from './pages/WordToPdf'
+import ImageToPdf from './pages/ImageToPdf'
+import PdfCompressor from './pages/PdfCompressor'
+import PdfToImages from './pages/PdfToImages'
+import UrlShortener from './pages/UrlShortener'
+import PasswordGenerator from './pages/PasswordGenerator'
+import JsonFormatter from './pages/JsonFormatter'
 import Footer from './components/Footer'
 
 export default function App() {
@@ -56,6 +68,19 @@ export default function App() {
           <Route path="/add-subtitles" element={<AddSubtitles />} />
           <Route path="/merge-videos" element={<MergeVideos />} />
           <Route path="/tools" element={<Tools />} />
+          <Route path="/audio-trim" element={<AudioTrimmer />} />
+          <Route path="/audio-merge" element={<AudioMerger />} />
+          <Route path="/noise-remover" element={<NoiseRemover />} />
+          <Route path="/audio-convert" element={<AudioConverter />} />
+          <Route path="/tts" element={<TextToSpeech />} />
+          <Route path="/word-to-pdf" element={<WordToPdf />} />
+          <Route path="/image-to-pdf" element={<ImageToPdf />} />
+          <Route path="/pdf-compress" element={<PdfCompressor />} />
+          <Route path="/pdf-to-images" element={<PdfToImages />} />
+          <Route path="/url-shortener" element={<UrlShortener />} />
+          <Route path="/password-generator" element={<PasswordGenerator />} />
+          <Route path="/json-formatter" element={<JsonFormatter />} />
+
         </Routes>
       </div>
       <Footer />

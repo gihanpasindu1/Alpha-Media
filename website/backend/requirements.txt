@@ -14,3 +14,8 @@ rembg[cpu]
 onnxruntime
 aiofiles
 apify-client
+noisereduce
+gTTS
+python-docx
+reportlab
+pdf2image

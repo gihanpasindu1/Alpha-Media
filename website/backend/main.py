@@ -946,6 +946,9 @@ async def merge_videos(
     finally:
         cleanup(path1, path2, out_path)
 
+import new_tools
+app.include_router(new_tools.router)
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 
