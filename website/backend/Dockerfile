@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
     git \
     nodejs \
     npm \
+    poppler-utils \
+    ghostscript \
+    libreoffice \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Deno (used by bgutil for PO tokens)
