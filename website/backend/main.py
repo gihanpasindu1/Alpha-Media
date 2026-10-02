@@ -342,14 +342,31 @@ async def face_blur(
                 for face in faces[1]:
                     x, y, fw, fh = face[0:4].astype(int)
                     
-                    startX = max(0, x - int(fw * 0.1))
-                    startY = max(0, y - int(fh * 0.1))
-                    endX = min(w, x + fw + int(fw * 0.1))
-                    endY = min(h, y + fh + int(fh * 0.1))
+                    # Add a slightly larger margin for the ellipse to cover the whole face
+                    startX = max(0, x - int(fw * 0.15))
+                    startY = max(0, y - int(fh * 0.15))
+                    endX = min(w, x + fw + int(fw * 0.15))
+                    endY = min(h, y + fh + int(fh * 0.15))
                     
                     if endX > startX and endY > startY:
                         roi = img[startY:endY, startX:endX]
-                        img[startY:endY, startX:endX] = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+                        roi_h, roi_w = roi.shape[:2]
+                        
+                        # Create an elliptical mask
+                        mask = np.zeros((roi_h, roi_w), dtype=np.uint8)
+                        center = (roi_w // 2, roi_h // 2)
+                        axes = (roi_w // 2, roi_h // 2)
+                        cv2.ellipse(mask, center, axes, 0, 0, 360, 255, -1)
+                        
+                        # Blur the ROI
+                        blurred_roi = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+                        
+                        # Blend using the mask (soft edge can be added by blurring the mask)
+                        mask = cv2.GaussianBlur(mask, (15, 15), 0)
+                        mask_3ch = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR) / 255.0
+                        
+                        roi_blended = roi * (1 - mask_3ch) + blurred_roi * mask_3ch
+                        img[startY:endY, startX:endX] = roi_blended.astype(np.uint8)
             return img
 
         if not is_video:
