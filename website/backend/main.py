@@ -80,7 +80,6 @@ async def download_video(
             "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
-            "cookiefile": "cookies.txt",
             # bgutil-ytdlp-pot-provider auto-fetches PO tokens from the server on port 4416
             "extractor_args": {
                 "youtube": ["player_client=web"],
