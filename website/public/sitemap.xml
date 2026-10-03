@@ -25,11 +25,23 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://alphamedia.bond/audio-visualizer</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.bond/auto-caption</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://alphamedia.bond/bg-remove</loc>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://alphamedia.bond/bpm</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.bond/code-to-image</loc>
     <priority>0.8</priority>
   </url>
   <url>
@@ -129,6 +141,10 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://alphamedia.bond/video-reverser</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://alphamedia.bond/video-speed</loc>
     <priority>0.8</priority>
   </url>
@@ -141,31 +157,15 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.bond/word-to-pdf</loc>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://alphamedia.bond/code-to-image</loc>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://alphamedia.bond/yt-summarize</loc>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://alphamedia.bond/voice-changer</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.bond/video-reverser</loc>
+    <loc>https://alphamedia.bond/word-to-pdf</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.bond/audio-visualizer</loc>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://alphamedia.bond/auto-caption</loc>
+    <loc>https://alphamedia.bond/yt-summarize</loc>
     <priority>0.8</priority>
   </url>
 </urlset>
