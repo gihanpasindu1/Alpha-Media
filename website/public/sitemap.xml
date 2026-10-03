@@ -1,171 +1,171 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://alphamedia.cyou/</loc>
+    <loc>https://alphamedia.bond/</loc>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/tools</loc>
+    <loc>https://alphamedia.bond/tools</loc>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/add-subtitles</loc>
+    <loc>https://alphamedia.bond/add-subtitles</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/audio-convert</loc>
+    <loc>https://alphamedia.bond/audio-convert</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/audio-merge</loc>
+    <loc>https://alphamedia.bond/audio-merge</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/audio-trim</loc>
+    <loc>https://alphamedia.bond/audio-trim</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/bg-remove</loc>
+    <loc>https://alphamedia.bond/bg-remove</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/bpm</loc>
+    <loc>https://alphamedia.bond/bpm</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/compress-image</loc>
+    <loc>https://alphamedia.bond/compress-image</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/compress-video</loc>
+    <loc>https://alphamedia.bond/compress-video</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/convert-image</loc>
+    <loc>https://alphamedia.bond/convert-image</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/download</loc>
+    <loc>https://alphamedia.bond/download</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/face-blur</loc>
+    <loc>https://alphamedia.bond/face-blur</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/gif</loc>
+    <loc>https://alphamedia.bond/gif</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/image-to-pdf</loc>
+    <loc>https://alphamedia.bond/image-to-pdf</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/json-formatter</loc>
+    <loc>https://alphamedia.bond/json-formatter</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/meme</loc>
+    <loc>https://alphamedia.bond/meme</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/merge-videos</loc>
+    <loc>https://alphamedia.bond/merge-videos</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/noise-remover</loc>
+    <loc>https://alphamedia.bond/noise-remover</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/ocr</loc>
+    <loc>https://alphamedia.bond/ocr</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/palette</loc>
+    <loc>https://alphamedia.bond/palette</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/password-generator</loc>
+    <loc>https://alphamedia.bond/password-generator</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/pdf</loc>
+    <loc>https://alphamedia.bond/pdf</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/pdf-compress</loc>
+    <loc>https://alphamedia.bond/pdf-compress</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/pdf-to-images</loc>
+    <loc>https://alphamedia.bond/pdf-to-images</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/qr</loc>
+    <loc>https://alphamedia.bond/qr</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/remove-watermark</loc>
+    <loc>https://alphamedia.bond/remove-watermark</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/screen-record</loc>
+    <loc>https://alphamedia.bond/screen-record</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/subtitles</loc>
+    <loc>https://alphamedia.bond/subtitles</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/trim</loc>
+    <loc>https://alphamedia.bond/trim</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/tts</loc>
+    <loc>https://alphamedia.bond/tts</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/url-shortener</loc>
+    <loc>https://alphamedia.bond/url-shortener</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/video-speed</loc>
+    <loc>https://alphamedia.bond/video-speed</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/video-to-mp3</loc>
+    <loc>https://alphamedia.bond/video-to-mp3</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/vocal-reducer</loc>
+    <loc>https://alphamedia.bond/vocal-reducer</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/word-to-pdf</loc>
+    <loc>https://alphamedia.bond/word-to-pdf</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/code-to-image</loc>
+    <loc>https://alphamedia.bond/code-to-image</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/yt-summarize</loc>
+    <loc>https://alphamedia.bond/yt-summarize</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/voice-changer</loc>
+    <loc>https://alphamedia.bond/voice-changer</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/video-reverser</loc>
+    <loc>https://alphamedia.bond/video-reverser</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/audio-visualizer</loc>
+    <loc>https://alphamedia.bond/audio-visualizer</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://alphamedia.cyou/auto-caption</loc>
+    <loc>https://alphamedia.bond/auto-caption</loc>
     <priority>0.8</priority>
   </url>
 </urlset>

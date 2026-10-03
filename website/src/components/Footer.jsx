@@ -30,7 +30,7 @@ export default function Footer() {
             <Link to="/password-generator">Password Generator</Link>
             <Link to="/json-formatter">JSON Formatter</Link>
             <Link to="/url-shortener">URL Shortener</Link>
-            <a href="mailto:contact@alphamedia.cyou">Contact Us</a>
+            <a href="mailto:contact@alphamedia.bond">Contact Us</a>
           </div>
         </div>
       </div>

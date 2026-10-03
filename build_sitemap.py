@@ -25,7 +25,7 @@ core_pages = [
 
 for path, priority in core_pages:
     xml += '  <url>\n'
-    xml += f'    <loc>https://alphamedia.cyou{path}</loc>\n'
+    xml += f'    <loc>https://alphamedia.bond{path}</loc>\n'
     xml += f'    <priority>{priority}</priority>\n'
     xml += '  </url>\n'
 
@@ -34,7 +34,7 @@ for path in sorted(paths):
     # If path is just / it's covered by core
     if path == '/': continue
     xml += '  <url>\n'
-    xml += f'    <loc>https://alphamedia.cyou{path}</loc>\n'
+    xml += f'    <loc>https://alphamedia.bond{path}</loc>\n'
     xml += '    <priority>0.8</priority>\n'
     xml += '  </url>\n'
 
