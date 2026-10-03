@@ -19,3 +19,7 @@ edge-tts
 python-docx
 reportlab
 pdf2image
+youtube-transcript-api
+SpeechRecognition
+pydub
+google-generativeai

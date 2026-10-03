@@ -368,3 +368,135 @@ async def redirect_url(short_id: str):
     
     conn.close()
     raise HTTPException(404, "URL not found")
+
+# ==========================================
+# WOW FACTOR TOOLS
+# ==========================================
+from pydantic import BaseModel
+class YtSumReq(BaseModel):
+    url: str
+    api_key: str
+
+@router.post("/api/yt-summarize")
+async def yt_summarize(req: YtSumReq):
+    from youtube_transcript_api import YouTubeTranscriptApi
+    import google.generativeai as genai
+    import urllib.parse
+    
+    try:
+        if "v=" in req.url:
+            video_id = urllib.parse.parse_qs(urllib.parse.urlparse(req.url).query).get("v", [None])[0]
+        else:
+            video_id = req.url.split("/")[-1].split("?")[0]
+            
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        full_text = " ".join([t['text'] for t in transcript])
+        
+        genai.configure(api_key=req.api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"Please summarize the following YouTube video transcript in a highly engaging, structured format. Provide a 3-sentence overview, followed by 3-5 key bullet points. Transcript: {full_text[:30000]}"
+        
+        response = model.generate_content(prompt)
+        return {"summary": response.text}
+    except Exception as e:
+        raise HTTPException(500, detail=str(e))
+
+@router.post("/api/voice-change")
+async def voice_change(background_tasks: BackgroundTasks, file: UploadFile = File(...), effect: str = Form(...)):
+    req_id = str(uuid.uuid4())
+    in_path = DATA_DIR / f"in_voice_{req_id}_{file.filename}"
+    out_path = DATA_DIR / f"out_voice_{req_id}.mp3"
+    
+    with open(in_path, "wb") as f:
+        f.write(await file.read())
+        
+    filters = {
+        "chipmunk": "asetrate=44100*1.5,aresample=44100",
+        "vader": "asetrate=44100*0.7,aresample=44100",
+        "echo": "aecho=0.8:0.9:1000:0.3",
+        "telephone": "highpass=f=200,lowpass=f=3000",
+        "robot": "afftfilt=real='hypot(re,im)*sin(0)':imag='hypot(re,im)*cos(0)':win_size=512:overlap=0.75"
+    }
+    af = filters.get(effect, "anull")
+    
+    cmd = ["ffmpeg", "-y", "-i", str(in_path), "-filter:a", af, str(out_path)]
+    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    await process.communicate()
+    
+    background_tasks.add_task(cleanup_files, in_path, out_path)
+    return FileResponse(out_path, filename=f"effect_{effect}.mp3")
+
+@router.post("/api/video-reverse")
+async def video_reverse(background_tasks: BackgroundTasks, file: UploadFile = File(...), mode: str = Form(...)):
+    req_id = str(uuid.uuid4())
+    in_path = DATA_DIR / f"in_rev_{req_id}.mp4"
+    out_path = DATA_DIR / f"out_rev_{req_id}.mp4"
+    
+    with open(in_path, "wb") as f:
+        f.write(await file.read())
+        
+    if mode == "reverse":
+        cmd = ["ffmpeg", "-y", "-i", str(in_path), "-vf", "reverse", "-af", "areverse", str(out_path)]
+    else:
+        # Boomerang
+        cmd = ["ffmpeg", "-y", "-i", str(in_path), "-filter_complex", "[0:v]reverse[r];[0:v][r]concat=n=2:v=1:a=0[outv]", "-map", "[outv]", str(out_path)]
+        
+    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    await process.communicate()
+    
+    background_tasks.add_task(cleanup_files, in_path, out_path)
+    return FileResponse(out_path, filename="boomerang.mp4")
+
+@router.post("/api/audio-visualizer")
+async def audio_visualizer(background_tasks: BackgroundTasks, file: UploadFile = File(...), color: str = Form(...)):
+    req_id = str(uuid.uuid4())
+    in_path = DATA_DIR / f"in_vis_{req_id}_{file.filename}"
+    out_path = DATA_DIR / f"out_vis_{req_id}.mp4"
+    
+    with open(in_path, "wb") as f:
+        f.write(await file.read())
+        
+    # Generate 1280x720 video with waveform
+    cmd = [
+        "ffmpeg", "-y", "-i", str(in_path),
+        "-filter_complex", f"[0:a]showwaves=s=1280x720:mode=cline:colors={color}[v]",
+        "-map", "[v]", "-map", "0:a",
+        "-c:v", "libx264", "-c:a", "aac", "-shortest",
+        str(out_path)
+    ]
+    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    await process.communicate()
+    
+    background_tasks.add_task(cleanup_files, in_path, out_path)
+    return FileResponse(out_path, filename="visualizer.mp4")
+
+@router.post("/api/auto-caption")
+async def auto_caption(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    import speech_recognition as sr
+    import pydub
+    req_id = str(uuid.uuid4())
+    in_path = DATA_DIR / f"in_cap_{req_id}_{file.filename}"
+    wav_path = DATA_DIR / f"temp_{req_id}.wav"
+    
+    with open(in_path, "wb") as f:
+        f.write(await file.read())
+        
+    # Convert input to wav first
+    cmd = ["ffmpeg", "-y", "-i", str(in_path), "-ar", "16000", "-ac", "1", str(wav_path)]
+    process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    await process.communicate()
+    
+    try:
+        r = sr.Recognizer()
+        with sr.AudioFile(str(wav_path)) as source:
+            # We chunk it to 30s to not exceed Google's free limit per request
+            audio_data = r.record(source, duration=30) 
+            text = r.recognize_google(audio_data)
+            
+        srt_content = f"1\n00:00:00,000 --> 00:00:30,000\n{text}\n"
+        
+        background_tasks.add_task(cleanup_files, in_path, wav_path)
+        return Response(content=srt_content, media_type="text/plain")
+    except Exception as e:
+        background_tasks.add_task(cleanup_files, in_path, wav_path)
+        raise HTTPException(500, detail=f"Failed to transcribe (API limit or error): {str(e)}")

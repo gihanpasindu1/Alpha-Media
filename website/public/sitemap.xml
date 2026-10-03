@@ -144,4 +144,28 @@
     <loc>https://alphamedia.cyou/word-to-pdf</loc>
     <priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://alphamedia.cyou/code-to-image</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/yt-summarize</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/voice-changer</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/video-reverser</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/audio-visualizer</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.cyou/auto-caption</loc>
+    <priority>0.8</priority>
+  </url>
 </urlset>

@@ -1,3 +1,4 @@
+import { Brain, Repeat, Activity, MessageSquare } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -56,6 +57,14 @@ export const allTools = [
   { to: '/url-shortener',   icon: LinkIcon,    label: 'URL Shortener',          desc: 'Create short, manageable links from long URLs.', color: '#3498db', category: 'utility' },
   { to: '/password-generator',icon: Shield,    label: 'Password Generator',     desc: 'Generate strong, random, and secure passwords.', color: '#3498db', category: 'utility' },
   { to: '/json-formatter',  icon: Code,        label: 'JSON Formatter',         desc: 'Format, validate, and beautify your JSON data.', color: '#3498db', category: 'utility' },
+
+  // WOW Tools
+  { to: '/yt-summarize',    icon: Brain,       label: 'AI YouTube Summarizer',  desc: 'Extract and summarize YouTube videos with AI.', color: '#10b981', category: 'utility' },
+  { to: '/code-to-image',   icon: Code,        label: 'Code to Image',          desc: 'Create beautiful shareable images of your code.', color: '#3b82f6', category: 'image' },
+  { to: '/voice-changer',   icon: Mic,         label: 'Voice Changer',          desc: 'Apply cinematic and fun effects to your voice.', color: '#8b5cf6', category: 'audio' },
+  { to: '/audio-visualizer',icon: Activity,    label: 'Audio Visualizer',       desc: 'Turn MP3s into stunning waveform videos.',       color: '#ec4899', category: 'video' },
+  { to: '/video-reverser',  icon: Repeat,      label: 'Boomerang Maker',        desc: 'Reverse videos or create TikTok boomerangs.',    color: '#f59e0b', category: 'video' },
+  { to: '/auto-caption',    icon: MessageSquare,label: 'Auto-Captioning',       desc: 'Transcribe videos automatically into SRT subtitles.', color: '#6366f1', category: 'utility' },
 ]
 
 const CATEGORIES = [
@@ -72,6 +81,9 @@ const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.38, ease: [0.22,1,0.36,1] } })
 }
+
+
+
 
 export default function Tools() {
   const [query, setQuery]     = useState('')

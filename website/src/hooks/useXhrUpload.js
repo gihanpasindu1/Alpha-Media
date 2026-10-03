@@ -47,11 +47,17 @@ export function useXhrUpload() {
             })
           resolve({ blob: xhr.response, headers })
         } else {
-          // Try to parse error detail
-          try {
-            const err = JSON.parse(xhr.responseText)
-            reject(new Error(err.detail || `Server error ${xhr.status}`))
-          } catch {
+          // Parse error detail from Blob response
+          if (xhr.response instanceof Blob) {
+            xhr.response.text().then(text => {
+              try {
+                const err = JSON.parse(text)
+                reject(new Error(err.detail || `Server error ${xhr.status}: ${text}`))
+              } catch {
+                reject(new Error(`Server error ${xhr.status}: ${text}`))
+              }
+            }).catch(() => reject(new Error(`Server error ${xhr.status}`)))
+          } else {
             reject(new Error(`Server error ${xhr.status}`))
           }
         }

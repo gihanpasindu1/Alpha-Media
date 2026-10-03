@@ -6,6 +6,14 @@ import Home from './pages/Home'
 import Tools from './pages/Tools'
 import NotFound from './pages/NotFound'
 
+import CodeToImage from './pages/CodeToImage'
+import YtSummarizer from './pages/YtSummarizer'
+import VoiceChanger from './pages/VoiceChanger'
+import VideoReverser from './pages/VideoReverser'
+import AudioVisualizer from './pages/AudioVisualizer'
+import AutoCaption from './pages/AutoCaption'
+
+
 const VideoDownloader = lazy(() => import('./pages/VideoDownloader'))
 const ClipTrimmer = lazy(() => import('./pages/ClipTrimmer'))
 const VideoToGif = lazy(() => import('./pages/VideoToGif'))
@@ -85,7 +93,14 @@ export default function App() {
           <Route path="/password-generator" element={<PasswordGenerator />} />
           <Route path="/json-formatter" element={<JsonFormatter />} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
+          
+        <Route path="/code-to-image" element={<CodeToImage />} />
+        <Route path="/yt-summarize" element={<YtSummarizer />} />
+        <Route path="/voice-changer" element={<VoiceChanger />} />
+        <Route path="/video-reverser" element={<VideoReverser />} />
+        <Route path="/audio-visualizer" element={<AudioVisualizer />} />
+        <Route path="/auto-caption" element={<AutoCaption />} />
+        </Routes>
         </Suspense>
       </div>
       <Footer />
