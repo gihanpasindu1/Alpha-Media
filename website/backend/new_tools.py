@@ -461,7 +461,7 @@ async def audio_visualizer(background_tasks: BackgroundTasks, file: UploadFile =
         "ffmpeg", "-y", "-i", str(in_path),
         "-filter_complex", f"[0:a]showwaves=s=1280x720:mode=cline:colors={color}[v]",
         "-map", "[v]", "-map", "0:a",
-        "-c:v", "libx264", "-c:a", "aac", "-shortest",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest",
         str(out_path)
     ]
     process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
