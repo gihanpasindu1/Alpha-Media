@@ -327,7 +327,7 @@ async function tick(){
  document.getElementById('load2').textContent=d.load[1].toFixed(2);
  document.getElementById('load3').textContent=d.load[2].toFixed(2);
  const perCore=d.load[0]/d.cpu_count;
- document.getElementById('loadmsg').textContent=perCore>1?'⚠️ overloaded — CPU can\'t keep up':perCore>0.7?'getting busy':'all good — CPU is relaxed';
+ document.getElementById('loadmsg').textContent=perCore>1?'⚠️ overloaded — CPU maxed out':perCore>0.7?'getting busy':'all good — CPU is relaxed';
  document.getElementById('loadmsg').style.color=perCore>1?'#f87171':perCore>0.7?'#fbbf24':'#34d399';
  const u=Math.floor(d.uptime_s/3600);document.getElementById('uptime').textContent='monitor uptime '+u+'h';
  document.getElementById('netconns').textContent=d.net.conns+' active connections';
