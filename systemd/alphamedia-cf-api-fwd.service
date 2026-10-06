@@ -1,10 +1,12 @@
 [Unit]
-Description=Forwards sinkholed Cloudflare API IP through egress proxy
+Description=Forwards sinkholed Cloudflare API IP through egress proxy (socat)
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/hatch/workspace/tgbot/systemd/socat-cf-api.sh
+User=root
+EnvironmentFile=/home/hatch/.config/alphamedia-api/env
+ExecStart=/bin/bash /home/hatch/workspace/tgbot/systemd/socat-cf-api.sh
 Restart=always
 RestartSec=5
 

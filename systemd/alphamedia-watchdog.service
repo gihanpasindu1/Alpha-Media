@@ -1,0 +1,9 @@
+[Unit]
+Description=AlphaMedia service watchdog (restore after VM replacement)
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/hatch/workspace/tgbot/systemd/install-alphamedia-services.sh
+ExecStartPost=/home/hatch/workspace/tgbot/systemd/ensure-system.sh
+User=root
