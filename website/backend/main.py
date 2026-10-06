@@ -580,16 +580,23 @@ async def face_blur(
     file: UploadFile = File(...),
     intensity: int = Form(30),
     face_ids: str = Form(""),  # JSON list of track IDs to blur; empty = blur all
+    async_job: bool = Form(False, alias="async"),  # New frontend sends async=true
 ):
-    """Start async blur job. Returns {job_id} immediately to avoid Cloudflare timeout.
-    Poll GET /api/face-blur-status/{job_id}, then download from /api/face-blur-result/{job_id}."""
+    """Blur faces. If async=true, returns {job_id} immediately (avoids Cloudflare timeout).
+    Poll GET /api/face-blur-status/{job_id}, then download from /api/face-blur-result/{job_id}.
+    If async=false (old frontend), processes synchronously and returns the video blob."""
     data = await file.read()
     fname = file.filename
-    job_id = uuid.uuid4().hex[:12]
-    _blur_jobs[job_id] = {"status": "processing", "progress": 0, "result_path": None, "error": None}
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(_face_pool, _run_blur_job, job_id, data, fname, intensity, face_ids)
-    return {"job_id": job_id, "status": "processing"}
+    if async_job:
+        job_id = uuid.uuid4().hex[:12]
+        _blur_jobs[job_id] = {"status": "processing", "progress": 0, "result_path": None, "error": None}
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(_face_pool, _run_blur_job, job_id, data, fname, intensity, face_ids)
+        return {"job_id": job_id, "status": "processing"}
+    else:
+        # Sync mode for old frontend (may timeout on long videos via Cloudflare)
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_face_pool, _do_face_blur, data, fname, intensity, face_ids)
 
 def _run_blur_job(job_id: str, data: bytes, filename: str, intensity: int, face_ids: str):
     try:

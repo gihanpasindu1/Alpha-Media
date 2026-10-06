@@ -74,6 +74,7 @@ export default function FaceBlur() {
       fd.append('file', file)
       fd.append('intensity', intensity)
       fd.append('face_ids', JSON.stringify([...selected]))
+      fd.append('async', 'true')
       // Start async job (avoids Cloudflare timeout on long videos)
       const r = await fetch(`${API}/api/face-blur`, { method: 'POST', body: fd })
       if (!r.ok) throw new Error('blur failed to start')
