@@ -1021,6 +1021,9 @@ async def merge_videos(
 import new_tools
 app.include_router(new_tools.router)
 
+import monitor as monitor_mod
+app.include_router(monitor_mod.router)
+
 # ─────────────────────────────── SERVE BUILT FRONTEND ───────────────────────
 # The Vite build (website/dist) is served from the same origin as the API, so
 # the site works on any public URL with zero baked-in API host configuration.
