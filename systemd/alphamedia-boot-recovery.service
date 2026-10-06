@@ -1,0 +1,12 @@
+[Unit]
+Description=AlphaMedia boot recovery (VM replacement)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/hatch/workspace/tgbot/systemd/alphamedia-boot-recovery.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

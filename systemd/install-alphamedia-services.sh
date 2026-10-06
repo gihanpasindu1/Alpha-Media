@@ -11,7 +11,7 @@ DST_DIR="/etc/systemd/system"
 SERVICES="alphamedia-api.service alphamedia-tunnel.service"
 TIMERS="alphamedia-watchdog.timer"
 # also copy the watchdog .service (oneshot, run by the timer)
-UNITS="alphamedia-watchdog.service"
+UNITS="alphamedia-watchdog.service alphamedia-boot-recovery.service"
 
 changed=0
 for svc in $SERVICES $UNITS $TIMERS; do
