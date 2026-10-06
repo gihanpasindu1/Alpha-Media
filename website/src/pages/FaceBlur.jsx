@@ -74,7 +74,25 @@ export default function FaceBlur() {
       fd.append('file', file)
       fd.append('intensity', intensity)
       fd.append('face_ids', JSON.stringify([...selected]))
-      const { blob } = await upload(`${API}/api/face-blur`, fd)
+      // Start async job (avoids Cloudflare timeout on long videos)
+      const r = await fetch(`${API}/api/face-blur`, { method: 'POST', body: fd })
+      if (!r.ok) throw new Error('blur failed to start')
+      const { job_id } = await r.json()
+      // Poll for completion
+      let done = false
+      for (let i = 0; i < 120; i++) {  // up to 10 min
+        await new Promise(res => setTimeout(res, 5000))
+        const sr = await fetch(`${API}/api/face-blur-status/${job_id}`)
+        if (!sr.ok) throw new Error('status check failed')
+        const st = await sr.json()
+        if (st.status === 'done') { done = true; break }
+        if (st.status === 'error') throw new Error(st.error || 'blur failed')
+      }
+      if (!done) throw new Error('blur timed out')
+      // Download result
+      const br = await fetch(`${API}/api/face-blur-result/${job_id}`)
+      if (!br.ok) throw new Error('download failed')
+      const blob = await br.blob()
       setResult(URL.createObjectURL(blob))
       setStatus({ type: 'success', msg: `Blurred ${selected.size} face${selected.size === 1 ? '' : 's'}!` })
     } catch (e) {

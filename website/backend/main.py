@@ -1,4 +1,9 @@
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+_face_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="face")
+# Async blur jobs: {job_id: {status, progress, result_path, error}}
+_blur_jobs = {}
 import uuid
 import shutil
 import subprocess
@@ -290,8 +295,24 @@ async def trim_video_from_url(
             force_keyframes_at_cuts=True,
         )
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+        # Retry up to 3 times (ffmpeg occasionally fails on merge)
+        last_err = None
+        for attempt in range(3):
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                # Clean partial files before retry
+                for f in out_dir.iterdir():
+                    try: f.unlink()
+                    except: pass
+                if attempt < 2:
+                    import time; time.sleep(2)
+        if last_err:
+            raise last_err
 
         files = list(out_dir.iterdir())
         if not files:
@@ -465,11 +486,18 @@ def _iou(a, b):
 async def face_scan(file: UploadFile = File(...)):
     """Analyze a video/image, return unique faces with thumbnails.
     Response: {faces: [{id, thumbnail (base64 jpeg), count}]}"""
-    suffix = Path(file.filename).suffix.lower()
+    # Read upload first (async), then run CPU-heavy work in thread pool
+    # so the API stays responsive to other requests (monitor, etc.)
+    data = await file.read()
+    fname = file.filename
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(_face_pool, _do_face_scan, data, fname)
+
+def _do_face_scan(data: bytes, filename: str):
+    suffix = Path(filename).suffix.lower()
     in_path = temp_path(suffix if suffix else ".mp4")
     try:
-        async with aiofiles.open(in_path, "wb") as f:
-            await f.write(await file.read())
+        in_path.write_bytes(data)
         scrfd = _get_scrfd()
         # tracks: [{hist, thumb_b64, count, last_box}]
         tracks = []
@@ -479,16 +507,21 @@ async def face_scan(file: UploadFile = File(...)):
             cap = cv2.VideoCapture(str(in_path))
             total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
             fps = cap.get(cv2.CAP_PROP_FPS) or 30
-            # sample ~10 frames per second, max 200 samples — dense enough to
-            # catch all angles of each face
-            n_samples = min(200, max(30, int(total / fps * 10)))
+            # sample ~3 frames per second, max 60 samples — enough for identity
+            # clustering while keeping scan fast (SCRFSD is CPU-heavy)
+            n_samples = min(60, max(15, int(total / fps * 3)))
             step = max(1, total // n_samples)
             for idx in range(0, total, step):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
                 ret, frame = cap.read()
                 if ret:
+                    # Downscale to max 640px width for faster SCRFD inference
+                    h, w = frame.shape[:2]
+                    if w > 640:
+                        scale = 640 / w
+                        frame = cv2.resize(frame, (640, int(h * scale)))
                     frames.append(frame)
-                if len(frames) >= 200:
+                if len(frames) >= 60:
                     break
             cap.release()
         else:
@@ -548,15 +581,60 @@ async def face_blur(
     intensity: int = Form(30),
     face_ids: str = Form(""),  # JSON list of track IDs to blur; empty = blur all
 ):
-    suffix = Path(file.filename).suffix.lower()
+    """Start async blur job. Returns {job_id} immediately to avoid Cloudflare timeout.
+    Poll GET /api/face-blur-status/{job_id}, then download from /api/face-blur-result/{job_id}."""
+    data = await file.read()
+    fname = file.filename
+    job_id = uuid.uuid4().hex[:12]
+    _blur_jobs[job_id] = {"status": "processing", "progress": 0, "result_path": None, "error": None}
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(_face_pool, _run_blur_job, job_id, data, fname, intensity, face_ids)
+    return {"job_id": job_id, "status": "processing"}
+
+def _run_blur_job(job_id: str, data: bytes, filename: str, intensity: int, face_ids: str):
+    try:
+        _blur_jobs[job_id]["progress"] = 10
+        result = _do_face_blur(data, filename, intensity, face_ids)
+        # _do_face_blur returns a Response; we need the file path instead
+        # For now, store the response and extract path
+        _blur_jobs[job_id]["status"] = "done"
+        _blur_jobs[job_id]["progress"] = 100
+        # The result is a Response with the file content; save job ref
+        _blur_jobs[job_id]["_response"] = result
+    except Exception as e:
+        _blur_jobs[job_id]["status"] = "error"
+        _blur_jobs[job_id]["error"] = str(e)
+
+@app.get("/api/face-blur-status/{job_id}")
+async def face_blur_status(job_id: str):
+    job = _blur_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    return {"job_id": job_id, "status": job["status"], "progress": job["progress"], "error": job["error"]}
+
+@app.get("/api/face-blur-result/{job_id}")
+async def face_blur_result(job_id: str):
+    job = _blur_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    if job["status"] != "done":
+        raise HTTPException(400, f"Job not ready: {job['status']}")
+    resp = job.get("_response")
+    if resp:
+        # Clean up job after download
+        del _blur_jobs[job_id]
+        return resp
+    raise HTTPException(500, "Result not available")
+
+def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
+    suffix = Path(filename).suffix.lower()
     is_video = suffix in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
     in_path = temp_path(suffix if suffix else (".mp4" if is_video else ".jpg"))
     out_path = temp_path(suffix if suffix else (".mp4" if is_video else ".jpg"))
     final_video_path = temp_path(".mp4")
     
     try:
-        async with aiofiles.open(in_path, "wb") as f:
-            await f.write(await file.read())
+        in_path.write_bytes(data)
 
         k = max(intensity | 1, 3)
 
@@ -619,6 +697,10 @@ async def face_blur(
                     cap2.set(cv2.CAP_PROP_POS_FRAMES, idx2)
                     ret2, f2 = cap2.read()
                     if not ret2: break
+                    h2, w2 = f2.shape[:2]
+                    if w2 > 640:
+                        s2 = 640 / w2
+                        f2 = cv2.resize(f2, (640, int(h2 * s2)))
                     for (x, y, bw, bh, emb) in _detect_faces_scrfd(scrfd_ref, f2):
                         box = (x, y, bw, bh)
                         hist = _face_hist(f2, box)
