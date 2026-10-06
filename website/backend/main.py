@@ -356,11 +356,149 @@ async def video_to_gif(
 
 
 # ─────────────────────────────── FACE BLUR ──────────────────────────────────
+# Selective face blur: /api/face-scan finds unique faces, user picks which to
+# blur, /api/face-blur blurs only the selected identities.
+
+import base64 as _b64
+
+def _mp_detector():
+    """MediaPipe face detector (BlazeFace, short-range model)."""
+    import mediapipe as mp
+    return mp.tasks.vision.FaceDetector.create_from_options(
+        mp.tasks.vision.FaceDetectorOptions(
+            base_options=mp.tasks.BaseOptions(
+                model_asset_path=_mp_model_path()),
+            running_mode=mp.tasks.vision.RunningMode.IMAGE,
+            min_detection_confidence=0.5,
+        )
+    )
+
+_mp_model = None
+def _mp_model_path():
+    p = Path("models/blaze_face_short_range.tflite")
+    if not p.exists():
+        import urllib.request
+        p.parent.mkdir(exist_ok=True)
+        urllib.request.urlretrieve(
+            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite",
+            str(p))
+    return str(p)
+
+def _get_mp_detector():
+    global _mp_model
+    if _mp_model is None:
+        _mp_model = _mp_detector()
+    return _mp_model
+
+def _detect_faces_mp(detector, bgr):
+    """Return list of (x, y, w, h) boxes in pixel coords."""
+    import mediapipe as mp
+    rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+    res = detector.detect(mp_img)
+    h, w = bgr.shape[:2]
+    boxes = []
+    if res.detections:
+        for d in res.detections:
+            bb = d.bounding_box
+            x = max(0, int(bb.origin_x)); y = max(0, int(bb.origin_y))
+            bw = int(bb.width); bh = int(bb.height)
+            boxes.append((x, y, min(bw, w - x), min(bh, h - y)))
+    return boxes
+
+def _face_hist(bgr, box):
+    """Normalized color histogram of a face crop (for identity matching)."""
+    x, y, w, h = box
+    crop = bgr[y:y+h, x:x+w]
+    if crop.size == 0:
+        return None
+    crop = cv2.resize(crop, (64, 64))
+    hist = cv2.calcHist([crop], [0, 1, 2], None, [8, 8, 8], [0, 256]*3)
+    cv2.normalize(hist, hist)
+    return hist
+
+def _iou(a, b):
+    ax, ay, aw, ah = a; bx, by, bw, bh = b
+    ix1, iy1 = max(ax, bx), max(ay, by)
+    ix2, iy2 = min(ax+aw, bx+bw), min(ay+ah, by+bh)
+    inter = max(0, ix2-ix1) * max(0, iy2-iy1)
+    union = aw*ah + bw*bh - inter
+    return inter / union if union else 0
+
+@app.post("/api/face-scan")
+async def face_scan(file: UploadFile = File(...)):
+    """Analyze a video/image, return unique faces with thumbnails.
+    Response: {faces: [{id, thumbnail (base64 jpeg), count}]}"""
+    suffix = Path(file.filename).suffix.lower()
+    in_path = temp_path(suffix if suffix else ".mp4")
+    try:
+        async with aiofiles.open(in_path, "wb") as f:
+            await f.write(await file.read())
+        detector = _get_mp_detector()
+        # tracks: [{hist, thumb_b64, count, last_box}]
+        tracks = []
+        is_video = suffix in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
+        frames = []
+        if is_video:
+            cap = cv2.VideoCapture(str(in_path))
+            total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+            step = max(1, total // 30)  # sample ~30 frames
+            idx = 0
+            while True:
+                ret, frame = cap.read()
+                if not ret: break
+                if idx % step == 0:
+                    frames.append(frame)
+                idx += 1
+            cap.release()
+        else:
+            img = cv2.imread(str(in_path))
+            if img is None:
+                raise HTTPException(400, "Invalid image")
+            frames = [img]
+        for frame in frames:
+            h, w = frame.shape[:2]
+            scale = 480 / w if w > 480 else 1.0
+            small = cv2.resize(frame, (int(w*scale), int(h*scale))) if scale < 1 else frame
+            boxes = _detect_faces_mp(detector, small)
+            # scale boxes back
+            boxes = [(int(x/scale), int(y/scale), int(bw/scale), int(bh/scale)) for x, y, bw, bh in boxes]
+            for box in boxes:
+                hist = _face_hist(frame, box)
+                if hist is None: continue
+                # match to existing track: high IoU with last box OR similar histogram
+                best, best_score = -1, 0
+                for i, t in enumerate(tracks):
+                    iou = _iou(box, t["last_box"])
+                    corr = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL)
+                    score = max(iou * 1.5, corr)
+                    if score > best_score:
+                        best_score, best = score, i
+                if best >= 0 and best_score > 0.45:
+                    t = tracks[best]
+                    # blend histogram, update
+                    t["hist"] = cv2.addWeighted(t["hist"], 0.7, hist, 0.3, 0)
+                    t["last_box"] = box
+                    t["count"] += 1
+                else:
+                    x, y, bw, bh = box
+                    thumb = frame[y:y+bh, x:x+bw]
+                    _, enc = cv2.imencode(".jpg", cv2.resize(thumb, (96, 96)) if thumb.size else thumb)
+                    tracks.append({
+                        "hist": hist, "last_box": box, "count": 1,
+                        "thumb_b64": _b64.b64encode(enc.tobytes()).decode(),
+                    })
+        faces = [{"id": i, "thumbnail": t["thumb_b64"], "appearances": t["count"]}
+                 for i, t in enumerate(tracks)]
+        return JSONResponse({"faces": faces, "count": len(faces)})
+    finally:
+        cleanup(in_path)
 
 @app.post("/api/face-blur")
 async def face_blur(
     file: UploadFile = File(...),
     intensity: int = Form(30),
+    face_ids: str = Form(""),  # JSON list of track IDs to blur; empty = blur all
 ):
     suffix = Path(file.filename).suffix.lower()
     is_video = suffix in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
@@ -423,8 +561,20 @@ async def face_blur(
             if img is None: raise HTTPException(400, "Invalid image")
             
             h, w = img.shape[:2]
-            detector = cv2.FaceDetectorYN.create(str(yunet_path), "", (w, h), score_threshold=0.5, nms_threshold=0.3)
-            img = blur_faces(img, detector)
+            mp_detector_img = _get_mp_detector()
+            boxes_img = _detect_faces_mp(mp_detector_img, img)
+            k_img = max(1, intensity // 2)
+            for (x, y, bw, bh) in boxes_img:
+                sx = max(0, x - int(bw * 0.15)); sy = max(0, y - int(bh * 0.15))
+                ex = min(w, x + bw + int(bw * 0.15)); ey = min(h, y + bh + int(bh * 0.15))
+                if ex > sx and ey > sy:
+                    roi = img[sy:ey, sx:ex]
+                    blurred = cv2.GaussianBlur(roi, (k_img*2+1, k_img*2+1), 0)
+                    mask = np.zeros((ey-sy, ex-sx), dtype=np.uint8)
+                    cv2.ellipse(mask, ((ex-sx)//2, (ey-sy)//2), ((ex-sx)//2, (ey-sy)//2), 0, 0, 360, 255, -1)
+                    mask = cv2.GaussianBlur(mask, (15, 15), 0)
+                    m3 = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR) / 255.0
+                    img[sy:ey, sx:ex] = (roi*(1-m3) + blurred*m3).astype(np.uint8)
             cv2.imwrite(str(out_path), img)
             
             content = out_path.read_bytes()
@@ -444,33 +594,83 @@ async def face_blur(
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             
             out = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
-            # Detect on a downscaled frame (max 480px wide) — YuNet is just as
-            # accurate on small images but ~4x faster. Boxes are scaled back up.
+            import json as _json
+            try:
+                selected_ids = set(_json.loads(face_ids)) if face_ids.strip() else None
+            except Exception:
+                selected_ids = None  # invalid -> blur all
+            mp_detector = _get_mp_detector()
+            # Build reference tracks if selective mode (same clustering as face-scan)
+            ref_tracks = []  # [{hist}]
+            if selected_ids is not None:
+                cap2 = cv2.VideoCapture(str(in_path))
+                total2 = int(cap2.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+                step2 = max(1, total2 // 30)
+                idx2 = 0
+                while True:
+                    ret2, f2 = cap2.read()
+                    if not ret2: break
+                    if idx2 % step2 == 0:
+                        h2, w2 = f2.shape[:2]
+                        sc2 = 480 / w2 if w2 > 480 else 1.0
+                        sm2 = cv2.resize(f2, (int(w2*sc2), int(h2*sc2))) if sc2 < 1 else f2
+                        for bx in _detect_faces_mp(mp_detector, sm2):
+                            box = (int(bx[0]/sc2), int(bx[1]/sc2), int(bx[2]/sc2), int(bx[3]/sc2))
+                            hist = _face_hist(f2, box)
+                            if hist is None: continue
+                            best, bs = -1, 0
+                            for i, t in enumerate(ref_tracks):
+                                c = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL)
+                                if c > bs: bs, best = c, i
+                            if best >= 0 and bs > 0.45:
+                                ref_tracks[best]["hist"] = cv2.addWeighted(ref_tracks[best]["hist"], 0.7, hist, 0.3, 0)
+                            else:
+                                ref_tracks.append({"hist": hist})
+                    idx2 += 1
+                cap2.release()
+
+            def _should_blur(frame, box):
+                if selected_ids is None:
+                    return True
+                hist = _face_hist(frame, box)
+                if hist is None: return False
+                best, bs = -1, 0
+                for i, t in enumerate(ref_tracks):
+                    c = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL)
+                    if c > bs: bs, best = c, i
+                return best in selected_ids and bs > 0.4
+
+            # Detect on a downscaled frame (max 480px wide).
             DET_W = 480
             det_scale = DET_W / width if width > DET_W else 1.0
-            det_w = int(width * det_scale)
-            det_h = int(height * det_scale)
-            detector = cv2.FaceDetectorYN.create(str(yunet_path), "", (det_w, det_h), score_threshold=0.5, nms_threshold=0.3)
-
-            # Detect faces every 3rd frame, reuse boxes in between (~3x faster,
-            # visually identical for normal head movement).
+            # Detect faces every 3rd frame, reuse boxes in between.
             DETECT_EVERY = 3
-            cached = None
+            cached_boxes = []
             frame_idx = 0
+            k = max(1, intensity // 2)
             while True:
                 ret, frame = cap.read()
                 if not ret: break
                 if frame_idx % DETECT_EVERY == 0:
-                    small = cv2.resize(frame, (det_w, det_h)) if det_scale < 1.0 else frame
-                    raw = detector.detect(small)
-                    # Scale boxes back to full resolution
-                    if raw[1] is not None and det_scale < 1.0:
-                        scaled = raw[1].copy()
-                        scaled[:, 0:4] /= det_scale
-                        cached = (raw[0], scaled)
-                    else:
-                        cached = raw
-                frame = blur_faces(frame, detector, cached_faces=cached)
+                    small = cv2.resize(frame, (int(width*det_scale), int(height*det_scale))) if det_scale < 1 else frame
+                    raw_boxes = _detect_faces_mp(mp_detector, small)
+                    cached_boxes = [(int(x/det_scale), int(y/det_scale), int(w_/det_scale), int(h_/det_scale))
+                                    for x, y, w_, h_ in raw_boxes]
+                h_f, w_f = frame.shape[:2]
+                for (x, y, bw, bh) in cached_boxes:
+                    if not _should_blur(frame, (x, y, bw, bh)):
+                        continue
+                    startX = max(0, x - int(bw * 0.15)); startY = max(0, y - int(bh * 0.15))
+                    endX = min(w_f, x + bw + int(bw * 0.15)); endY = min(h_f, y + bh + int(bh * 0.15))
+                    if endX > startX and endY > startY:
+                        roi = frame[startY:endY, startX:endX]
+                        blurred = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+                        mask = np.zeros((endY-startY, endX-startX), dtype=np.uint8)
+                        cv2.ellipse(mask, ((endX-startX)//2, (endY-startY)//2),
+                                    ((endX-startX)//2, (endY-startY)//2), 0, 0, 360, 255, -1)
+                        mask = cv2.GaussianBlur(mask, (15, 15), 0)
+                        m3 = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR) / 255.0
+                        frame[startY:endY, startX:endX] = (roi*(1-m3) + blurred*m3).astype(np.uint8)
                 out.write(frame)
                 frame_idx += 1
                 

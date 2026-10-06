@@ -13,8 +13,11 @@ export default function FaceBlur() {
   const [result, setResult] = useState(null)
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [intensity, setIntensity] = useState(30)
   const [isVideo, setIsVideo] = useState(false)
+  const [faces, setFaces] = useState([])       // [{id, thumbnail, appearances}]
+  const [selected, setSelected] = useState(new Set())  // ids to blur
   const { upload, progress, phase, reset } = useXhrUpload()
 
   const onDrop = useCallback((accepted) => {
@@ -25,8 +28,37 @@ export default function FaceBlur() {
     setOriginal(URL.createObjectURL(f))
     setResult(null)
     setStatus(null)
+    setFaces([])
+    setSelected(new Set())
     reset()
+    // auto-scan for unique faces
+    scanFaces(f)
   }, [reset])
+
+  const scanFaces = async (f) => {
+    setScanning(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', f)
+      const r = await fetch(`${API}/api/face-scan`, { method: 'POST', body: fd })
+      if (!r.ok) throw new Error('scan failed')
+      const data = await r.json()
+      setFaces(data.faces || [])
+      setSelected(new Set((data.faces || []).map(x => x.id)))  // default: blur all
+    } catch (e) {
+      setFaces([])
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  const toggleFace = (id) => {
+    setSelected(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      return n
+    })
+  }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop, accept: { 'image/*': [], 'video/*': [] }, multiple: false
@@ -41,9 +73,10 @@ export default function FaceBlur() {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('intensity', intensity)
+      fd.append('face_ids', JSON.stringify([...selected]))
       const { blob } = await upload(`${API}/api/face-blur`, fd)
       setResult(URL.createObjectURL(blob))
-      setStatus({ type: 'success', msg: 'Face blur applied successfully!' })
+      setStatus({ type: 'success', msg: `Blurred ${selected.size} face${selected.size === 1 ? '' : 's'}!` })
     } catch (e) {
       setStatus({ type: 'error', msg: e.message })
     } finally {
@@ -64,8 +97,8 @@ export default function FaceBlur() {
     <main className="tool-page">
       <div className="container">
         <motion.div className="tool-header" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1><span className="glow-text">AI Face Blur (Multi-Face Tracking)</span></h1>
-          <p>Automatically detect and blur all faces in a photo or video to protect privacy.</p>
+          <h1><span className="glow-text">AI Face Blur (Selective)</span></h1>
+          <p>Upload a photo or video — we'll find every unique face and let you choose who to blur.</p>
         </motion.div>
 
         <motion.div className="tool-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
@@ -109,9 +142,46 @@ export default function FaceBlur() {
             <input type="range" min="10" max="100" value={intensity} onChange={(e) => setIntensity(e.target.value)} style={{ width: '100%' }} />
           </div>
 
+          {scanning && (
+            <div style={{ marginTop: 16, color: 'var(--text-muted)', fontSize: 14 }}>
+              <span className="spinner" /> Scanning for faces…
+            </div>
+          )}
+
+          {faces.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>
+                Found {faces.length} face{faces.length === 1 ? '' : 's'} — tap to choose who to blur:
+              </p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {faces.map(f => {
+                  const on = selected.has(f.id)
+                  return (
+                    <div key={f.id} onClick={() => toggleFace(f.id)}
+                      style={{
+                        cursor: 'pointer', borderRadius: 12, overflow: 'hidden',
+                        border: `3px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+                        opacity: on ? 1 : 0.45, transition: 'all .15s',
+                        position: 'relative', width: 96,
+                      }}>
+                      <img src={`data:image/jpeg;base64,${f.thumbnail}`} alt={`face ${f.id + 1}`}
+                        style={{ width: 96, height: 96, objectFit: 'cover', display: 'block' }} />
+                      <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        background: on ? 'var(--accent)' : 'rgba(0,0,0,.6)',
+                        color: '#fff', fontSize: 11, textAlign: 'center', padding: '2px 0',
+                        fontWeight: 600,
+                      }}>{on ? '✓ BLUR' : 'keep'}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-            <button className="btn btn-primary" onClick={handleBlur} disabled={loading || !file} style={{ flex: 1 }}>
-              {loading ? <><span className="spinner" /> Processing…</> : <><Eye size={18} /> Blur Faces</>}
+            <button className="btn btn-primary" onClick={handleBlur} disabled={loading || !file || selected.size === 0} style={{ flex: 1 }}>
+              {loading ? <><span className="spinner" /> Processing…</> : <><Eye size={18} /> Blur {selected.size > 0 ? `${selected.size} ` : ''}Face{selected.size === 1 ? '' : 's'}</>}
             </button>
             {result && (
               <button className="btn btn-secondary" onClick={handleDownload}>
