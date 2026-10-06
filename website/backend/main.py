@@ -389,6 +389,9 @@ def _detect_faces_yunet(detector, bgr, det_w=320, det_h=320):
     h, w = bgr.shape[:2]
     scale = det_w / w if w > det_w else 1.0
     small = cv2.resize(bgr, (int(w*scale), int(h*scale))) if scale < 1 else bgr
+    sh, sw = small.shape[:2]
+    # YuNet requires the input size to be set before each detect call
+    detector.setInputSize((sw, sh))
     _, faces = detector.detect(small)
     boxes = []
     if faces is not None:
