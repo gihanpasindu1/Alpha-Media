@@ -1,4 +1,5 @@
 tunnel: 3bb515e8-bffd-4858-aeb7-77d226d05edc
+protocol: http2
 edge:
   - 127.0.0.1:7844
   - 127.0.0.1:7846
