@@ -458,11 +458,14 @@ async def face_scan(file: UploadFile = File(...)):
             if img is None:
                 raise HTTPException(400, "Invalid image")
             frames = [img]
+        _dbg_frames = len(frames)
+        _dbg_detections = 0
         for frame in frames:
             h, w = frame.shape[:2]
             scale = 480 / w if w > 480 else 1.0
             small = cv2.resize(frame, (int(w*scale), int(h*scale))) if scale < 1 else frame
             boxes = _detect_faces_mp(detector, small)
+            _dbg_detections += len(boxes)
             # scale boxes back
             boxes = [(int(x/scale), int(y/scale), int(bw/scale), int(bh/scale)) for x, y, bw, bh in boxes]
             for box in boxes:
@@ -496,7 +499,10 @@ async def face_scan(file: UploadFile = File(...)):
             tracks = [t for t in tracks if t["count"] >= 2]
         faces = [{"id": i, "thumbnail": t["thumb_b64"], "appearances": t["count"]}
                  for i, t in enumerate(tracks)]
-        return JSONResponse({"faces": faces, "count": len(faces)})
+        return JSONResponse({"faces": faces, "count": len(faces),
+                                 "_debug": {"frames_sampled": _dbg_frames,
+                                            "total_detections": _dbg_detections,
+                                            "tracks_before_filter": len(tracks) + len([t for t in tracks if t["count"] < 2]) if is_video else len(tracks)}})
     finally:
         cleanup(in_path)
 
