@@ -490,8 +490,10 @@ async def face_scan(file: UploadFile = File(...)):
                         "hist": hist, "last_box": box, "count": 1,
                         "thumb_b64": _b64.b64encode(enc.tobytes()).decode(),
                     })
-        # drop tracks seen only once (false positives), keep the rest
-        tracks = [t for t in tracks if t["count"] >= 2]
+        # drop single-appearance tracks only for videos (false positives);
+        # for still images there's just one frame so keep everything
+        if is_video:
+            tracks = [t for t in tracks if t["count"] >= 2]
         faces = [{"id": i, "thumbnail": t["thumb_b64"], "appearances": t["count"]}
                  for i, t in enumerate(tracks)]
         return JSONResponse({"faces": faces, "count": len(faces)})
