@@ -596,7 +596,7 @@ async def face_blur(
                 selected_ids = set(_json.loads(face_ids)) if face_ids.strip() else None
             except Exception:
                 selected_ids = None  # invalid -> blur all
-            scrfd_blur = _get_scrfd()
+            mp_detector_blur = _get_mp_detector()
             # Build reference tracks if selective mode (same clustering as face-scan)
             ref_tracks = []  # [{hist}]
             if selected_ids is not None:
@@ -608,7 +608,7 @@ async def face_blur(
                     ret2, f2 = cap2.read()
                     if not ret2: break
                     if idx2 % step2 == 0:
-                        for bx in _detect_faces_scrfd(scrfd_blur, f2):
+                        for bx in _detect_faces_mp(mp_detector_blur, f2):
                             hist = _face_hist(f2, bx)
                             if hist is None: continue
                             best, bs = -1, 0
@@ -633,8 +633,8 @@ async def face_blur(
                     if c > bs: bs, best = c, i
                 return best in selected_ids and bs > 0.4
 
-            # SCRFD every 5th frame (it's slower but accurate), track boxes between.
-            DETECT_EVERY = 5
+            # MediaPipe every 3rd frame (fast), reuse boxes between.
+            DETECT_EVERY = 3
             cached_boxes = []
             frame_idx = 0
             k = max(1, intensity // 2)
@@ -642,7 +642,9 @@ async def face_blur(
                 ret, frame = cap.read()
                 if not ret: break
                 if frame_idx % DETECT_EVERY == 0:
-                    cached_boxes = _detect_faces_scrfd(scrfd_blur, frame)
+                    small_blur = cv2.resize(frame, (480, int(frame.shape[0]*480/frame.shape[1]))) if frame.shape[1] > 480 else frame
+                    _sc = 480 / frame.shape[1] if frame.shape[1] > 480 else 1.0
+                    cached_boxes = [(int(x/_sc), int(y/_sc), int(w_/_sc), int(h_/_sc)) for x, y, w_, h_ in _detect_faces_mp(mp_detector_blur, small_blur)]
                 h_f, w_f = frame.shape[:2]
                 for (x, y, bw, bh) in cached_boxes:
                     if not _should_blur(frame, (x, y, bw, bh)):
