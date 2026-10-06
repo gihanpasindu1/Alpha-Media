@@ -280,10 +280,11 @@ async def trim_video_from_url(
             raise HTTPException(400, "End time must be after start time.")
 
         ydl_opts = _yt_dlp_opts(
-            format=f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best",
+            format=f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/bestvideo+bestaudio/best",
             outtmpl=str(out_dir / "clip.%(ext)s"),
             noplaylist=True,
             quiet=True,
+            no_warnings=True,
             merge_output_format="mp4",
             download_ranges=yt_dlp.utils.download_range_func(None, [(start_sec, end_sec)]),
             force_keyframes_at_cuts=True,
