@@ -596,7 +596,7 @@ async def face_blur(
                 selected_ids = set(_json.loads(face_ids)) if face_ids.strip() else None
             except Exception:
                 selected_ids = None  # invalid -> blur all
-            mp_detector = _get_mp_detector()
+            scrfd_blur = _get_scrfd()
             # Build reference tracks if selective mode (same clustering as face-scan)
             ref_tracks = []  # [{hist}]
             if selected_ids is not None:
@@ -608,12 +608,8 @@ async def face_blur(
                     ret2, f2 = cap2.read()
                     if not ret2: break
                     if idx2 % step2 == 0:
-                        h2, w2 = f2.shape[:2]
-                        sc2 = 480 / w2 if w2 > 480 else 1.0
-                        sm2 = cv2.resize(f2, (int(w2*sc2), int(h2*sc2))) if sc2 < 1 else f2
-                        for bx in _detect_faces_mp(mp_detector, sm2):
-                            box = (int(bx[0]/sc2), int(bx[1]/sc2), int(bx[2]/sc2), int(bx[3]/sc2))
-                            hist = _face_hist(f2, box)
+                        for bx in _detect_faces_scrfd(scrfd_blur, f2):
+                            hist = _face_hist(f2, bx)
                             if hist is None: continue
                             best, bs = -1, 0
                             for i, t in enumerate(ref_tracks):
@@ -637,11 +633,8 @@ async def face_blur(
                     if c > bs: bs, best = c, i
                 return best in selected_ids and bs > 0.4
 
-            # Detect on a downscaled frame (max 480px wide).
-            DET_W = 480
-            det_scale = DET_W / width if width > DET_W else 1.0
-            # Detect faces every 3rd frame, reuse boxes in between.
-            DETECT_EVERY = 3
+            # SCRFD every 5th frame (it's slower but accurate), track boxes between.
+            DETECT_EVERY = 5
             cached_boxes = []
             frame_idx = 0
             k = max(1, intensity // 2)
@@ -649,10 +642,7 @@ async def face_blur(
                 ret, frame = cap.read()
                 if not ret: break
                 if frame_idx % DETECT_EVERY == 0:
-                    small = cv2.resize(frame, (int(width*det_scale), int(height*det_scale))) if det_scale < 1 else frame
-                    raw_boxes = _detect_faces_mp(mp_detector, small)
-                    cached_boxes = [(int(x/det_scale), int(y/det_scale), int(w_/det_scale), int(h_/det_scale))
-                                    for x, y, w_, h_ in raw_boxes]
+                    cached_boxes = _detect_faces_scrfd(scrfd_blur, frame)
                 h_f, w_f = frame.shape[:2]
                 for (x, y, bw, bh) in cached_boxes:
                     if not _should_blur(frame, (x, y, bw, bh)):
