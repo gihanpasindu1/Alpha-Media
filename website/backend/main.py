@@ -375,12 +375,12 @@ def _mp_detector():
 
 _mp_model = None
 def _mp_model_path():
-    p = Path("models/blaze_face_full_range.tflite")
+    p = Path("models/blaze_face_short_range.tflite")
     if not p.exists():
         import urllib.request
         p.parent.mkdir(exist_ok=True)
         urllib.request.urlretrieve(
-            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/latest/blaze_face_full_range.tflite",
+            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite",
             str(p))
     return str(p)
 
@@ -442,7 +442,9 @@ async def face_scan(file: UploadFile = File(...)):
         if is_video:
             cap = cv2.VideoCapture(str(in_path))
             total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-            step = max(1, total // 30)  # sample ~30 frames
+            # dense sampling: every 10th frame, up to 120 samples — catches
+            # faces that appear mid-video, not just the opening shot
+            step = max(1, min(10, total // 120))
             idx = 0
             while True:
                 ret, frame = cap.read()
@@ -474,7 +476,7 @@ async def face_scan(file: UploadFile = File(...)):
                     score = max(iou * 1.5, corr)
                     if score > best_score:
                         best_score, best = score, i
-                if best >= 0 and best_score > 0.45:
+                if best >= 0 and best_score > 0.65:
                     t = tracks[best]
                     # blend histogram, update
                     t["hist"] = cv2.addWeighted(t["hist"], 0.7, hist, 0.3, 0)
@@ -488,6 +490,8 @@ async def face_scan(file: UploadFile = File(...)):
                         "hist": hist, "last_box": box, "count": 1,
                         "thumb_b64": _b64.b64encode(enc.tobytes()).decode(),
                     })
+        # drop tracks seen only once (false positives), keep the rest
+        tracks = [t for t in tracks if t["count"] >= 2]
         faces = [{"id": i, "thumbnail": t["thumb_b64"], "appearances": t["count"]}
                  for i, t in enumerate(tracks)]
         return JSONResponse({"faces": faces, "count": len(faces)})
@@ -605,7 +609,7 @@ async def face_blur(
             if selected_ids is not None:
                 cap2 = cv2.VideoCapture(str(in_path))
                 total2 = int(cap2.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-                step2 = max(1, total2 // 30)
+                step2 = max(1, min(10, total2 // 120))
                 idx2 = 0
                 while True:
                     ret2, f2 = cap2.read()
@@ -622,7 +626,7 @@ async def face_blur(
                             for i, t in enumerate(ref_tracks):
                                 c = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL)
                                 if c > bs: bs, best = c, i
-                            if best >= 0 and bs > 0.45:
+                            if best >= 0 and bs > 0.65:
                                 ref_tracks[best]["hist"] = cv2.addWeighted(ref_tracks[best]["hist"], 0.7, hist, 0.3, 0)
                             else:
                                 ref_tracks.append({"hist": hist})
