@@ -1,0 +1,20 @@
+[Unit]
+Description=AlphaMedia API backend (TGbot rebuild branch)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/hatch/workspace/tgbot/website/backend
+EnvironmentFile=/home/hatch/.config/alphamedia-api/env
+ExecStartPre=/home/hatch/workspace/tgbot/systemd/ensure-system.sh
+ExecStartPre=/home/hatch/workspace/tgbot/systemd/ensure-venv.sh
+ExecStart=/home/hatch/workspace/tgbot/website/backend/venv/bin/python -u -m uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/alphamedia-api.log
+StandardError=append:/var/log/alphamedia-api.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.npm/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data/temp
+*.log
+data/temp/
+*.tmp
+
+# Models (large, downloaded on demand)
+*.onnx
+*.pth
