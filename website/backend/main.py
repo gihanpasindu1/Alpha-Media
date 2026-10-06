@@ -410,6 +410,29 @@ def _detect_faces_mp(detector, bgr):
             boxes.append((x, y, min(bw, w - x), min(bh, h - y)))
     return boxes
 
+_scrfd_app = None
+def _get_scrfd():
+    """InsightFace SCRFD face detector — much more accurate than MediaPipe/YuNet."""
+    global _scrfd_app
+    if _scrfd_app is None:
+        from insightface.app import FaceAnalysis
+        _scrfd_app = FaceAnalysis(name='buffalo_s', providers=['CPUExecutionProvider'])
+        _scrfd_app.prepare(ctx_id=0, det_size=(640, 640))
+    return _scrfd_app
+
+def _detect_faces_scrfd(app, bgr):
+    """Return list of (x, y, w, h) boxes using SCRFD."""
+    faces = app.get(bgr)
+    boxes = []
+    h, w = bgr.shape[:2]
+    for f in faces:
+        x1, y1, x2, y2 = f.bbox.astype(int)
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(w, x2), min(h, y2)
+        if x2 > x1 and y2 > y1:
+            boxes.append((x1, y1, x2 - x1, y2 - y1))
+    return boxes
+
 def _face_hist(bgr, box):
     """Normalized color histogram of a face crop (for identity matching)."""
     x, y, w, h = box
@@ -438,7 +461,7 @@ async def face_scan(file: UploadFile = File(...)):
     try:
         async with aiofiles.open(in_path, "wb") as f:
             await f.write(await file.read())
-        mp_detector = _get_mp_detector()
+        scrfd = _get_scrfd()
         # tracks: [{hist, thumb_b64, count, last_box}]
         tracks = []
         is_video = suffix in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
@@ -470,10 +493,8 @@ async def face_scan(file: UploadFile = File(...)):
             h, w = frame.shape[:2]
             scale = 480 / w if w > 480 else 1.0
             small = cv2.resize(frame, (int(w*scale), int(h*scale))) if scale < 1 else frame
-            boxes = _detect_faces_mp(mp_detector, small)
+            boxes = _detect_faces_scrfd(scrfd, frame)
             _dbg_detections += len(boxes)
-            # scale boxes back
-            boxes = [(int(x/scale), int(y/scale), int(bw/scale), int(bh/scale)) for x, y, bw, bh in boxes]
             for box in boxes:
                 hist = _face_hist(frame, box)
                 if hist is None: continue

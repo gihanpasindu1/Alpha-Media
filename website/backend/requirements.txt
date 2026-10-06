@@ -24,3 +24,5 @@ SpeechRecognition
 pydub
 google-generativeai
 gtts
+insightface
+mediapipe
