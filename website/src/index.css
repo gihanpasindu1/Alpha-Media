@@ -2,9 +2,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* ═══════════════════════════════════════════════════════════
-   DARK THEME (default)  — Navy + Amber Gold
+   LIGHT THEME (default) — Clean Minimal White + Teal
 ═══════════════════════════════════════════════════════════ */
 :root,
+[data-theme="light"] {
+  --bg:           #ffffff;
+  --bg2:          #fafafa;
+  --surface:      #ffffff;
+  --surface2:     #f5f5f5;
+  --surface3:     #eeeeee;
+  --border:       rgba(0,0,0,0.08);
+  --border-hover: rgba(13,148,136,0.4);
+
+  --accent:      #0d9488;
+  --accent-dim:  #0f766e;
+  --accent-glow: rgba(13,148,136,0.12);
+  --accent2:     #14b8a6;
+
+  --text:       #111111;
+  --text-muted: #6b7280;
+  --text-dim:   #9ca3af;
+
+  --success: #059669;
+  --error:   #dc2626;
+
+  --navbar-bg:   rgba(255,255,255,0.95);
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.06);
+
+  --radius:    14px;
+  --radius-sm: 8px;
+  --transition: 0.2s cubic-bezier(.4,0,.2,1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DARK THEME — Navy + Amber Gold (legacy)
+═══════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
   --bg:           #0b0e14;
   --bg2:          #0f1318;
@@ -28,43 +60,11 @@
 
   --navbar-bg:     rgba(11,14,20,0.92);
   --card-shadow:   0 6px 24px rgba(0,0,0,0.35);
-
-  --radius:    14px;
-  --radius-sm: 8px;
-  --transition: 0.2s cubic-bezier(.4,0,.2,1);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LIGHT THEME  — White + Emerald Green + Sky Blue
-═══════════════════════════════════════════════════════════ */
-[data-theme="light"] {
-  --bg:           #f0fdf9;
-  --bg2:          #e8faf5;
-  --surface:      #ffffff;
-  --surface2:     #f3faf7;
-  --surface3:     #e6f5f0;
-  --border:       rgba(0,0,0,0.08);
-  --border-hover: rgba(5,150,105,0.4);
-
-  --accent:      #f5a623;
-  --accent-dim:  #e09612;
-  --accent-glow: rgba(245, 166, 35, 0.15);
-  --accent2:     #ffcc5c;
-
-  --text:       #0d1f1a;
-  --text-muted: #4a7a6d;
-  --text-dim:   #9abfb6;
-
-  --success: #059669;
-  --error:   #dc2626;
-
-  --navbar-bg:   rgba(240,253,249,0.95);
-  --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-
-/* Fix for white logo in light mode (turns white to black, keeps orange orange) */
-[data-theme="light"] .navbar-logo img,
-[data-theme="light"] .footer-logo img {
+/* Fix for dark logo in dark mode */
+[data-theme="dark"] .navbar-logo img,
+[data-theme="dark"] .footer-logo img {
   filter: invert(1) hue-rotate(180deg);
 }
 
