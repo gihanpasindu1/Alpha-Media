@@ -364,40 +364,49 @@ async def video_to_gif(
 
 import base64 as _b64
 
-_yunet_detector = None
-def _get_yunet_detector(det_w=320, det_h=320):
-    """YuNet face detector (OpenCV DNN) — cached per input size."""
-    global _yunet_detector
-    key = (det_w, det_h)
-    if not hasattr(_get_yunet_detector, "cache"):
-        _get_yunet_detector.cache = {}
-    if key not in _get_yunet_detector.cache:
-        model_path = Path("models/face_detection_yunet_2023mar.onnx")
-        if not model_path.exists():
-            import urllib.request
-            model_path.parent.mkdir(exist_ok=True)
-            urllib.request.urlretrieve(
-                "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx",
-                str(model_path))
-        _get_yunet_detector.cache[key] = cv2.FaceDetectorYN.create(
-            str(model_path), "", (det_w, det_h),
-            score_threshold=0.4, nms_threshold=0.3)
-    return _get_yunet_detector.cache[key]
+def _mp_detector():
+    """MediaPipe face detector (BlazeFace, short-range model)."""
+    import mediapipe as mp
+    return mp.tasks.vision.FaceDetector.create_from_options(
+        mp.tasks.vision.FaceDetectorOptions(
+            base_options=mp.tasks.BaseOptions(
+                model_asset_path=_mp_model_path()),
+            running_mode=mp.tasks.vision.RunningMode.IMAGE,
+            min_detection_confidence=0.3,
+        )
+    )
 
-def _detect_faces_yunet(detector, bgr, det_w=320, det_h=320):
-    """Return list of (x, y, w, h) boxes in pixel coords using YuNet."""
+_mp_model = None
+def _mp_model_path():
+    p = Path("models/blaze_face_short_range.tflite")
+    if not p.exists():
+        import urllib.request
+        p.parent.mkdir(exist_ok=True)
+        urllib.request.urlretrieve(
+            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite",
+            str(p))
+    return str(p)
+
+def _get_mp_detector():
+    global _mp_model
+    if _mp_model is None:
+        _mp_model = _mp_detector()
+    return _mp_model
+
+def _detect_faces_mp(detector, bgr):
+    """Return list of (x, y, w, h) boxes in pixel coords."""
+    import mediapipe as mp
+    rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+    res = detector.detect(mp_img)
     h, w = bgr.shape[:2]
-    scale = det_w / w if w > det_w else 1.0
-    small = cv2.resize(bgr, (int(w*scale), int(h*scale))) if scale < 1 else bgr
-    sh, sw = small.shape[:2]
-    # YuNet requires the input size to be set before each detect call
-    detector.setInputSize((sw, sh))
-    _, faces = detector.detect(small)
     boxes = []
-    if faces is not None:
-        for f in faces:
-            x, y, bw, bh = (f[0:4] / scale).astype(int)
-            boxes.append((max(0,x), max(0,y), bw, bh))
+    if res.detections:
+        for d in res.detections:
+            bb = d.bounding_box
+            x = max(0, int(bb.origin_x)); y = max(0, int(bb.origin_y))
+            bw = int(bb.width); bh = int(bb.height)
+            boxes.append((x, y, min(bw, w - x), min(bh, h - y)))
     return boxes
 
 def _face_hist(bgr, box):
@@ -428,7 +437,7 @@ async def face_scan(file: UploadFile = File(...)):
     try:
         async with aiofiles.open(in_path, "wb") as f:
             await f.write(await file.read())
-        detector = _get_yunet_detector()
+        mp_detector = _get_mp_detector()
         # tracks: [{hist, thumb_b64, count, last_box}]
         tracks = []
         is_video = suffix in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
@@ -459,7 +468,7 @@ async def face_scan(file: UploadFile = File(...)):
             h, w = frame.shape[:2]
             scale = 480 / w if w > 480 else 1.0
             small = cv2.resize(frame, (int(w*scale), int(h*scale))) if scale < 1 else frame
-            boxes = _detect_faces_yunet(detector, small)
+            boxes = _detect_faces_mp(mp_detector, small)
             _dbg_detections += len(boxes)
             # scale boxes back
             boxes = [(int(x/scale), int(y/scale), int(bw/scale), int(bh/scale)) for x, y, bw, bh in boxes]
@@ -517,14 +526,6 @@ async def face_blur(
         async with aiofiles.open(in_path, "wb") as f:
             await f.write(await file.read())
 
-        import urllib.request
-        model_dir = Path("models")
-        model_dir.mkdir(exist_ok=True)
-        yunet_path = model_dir / "face_detection_yunet_2023mar.onnx"
-        
-        if not yunet_path.exists():
-            urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx", str(yunet_path))
-
         k = max(intensity | 1, 3)
 
 
@@ -534,8 +535,8 @@ async def face_blur(
             if img is None: raise HTTPException(400, "Invalid image")
             
             h, w = img.shape[:2]
-            detector_img = _get_yunet_detector()
-            boxes_img = _detect_faces_yunet(detector_img, img)
+            mp_detector_img = _get_mp_detector()
+            boxes_img = _detect_faces_mp(mp_detector_img, img)
             k_img = max(1, intensity // 2)
             for (x, y, bw, bh) in boxes_img:
                 sx = max(0, x - int(bw * 0.15)); sy = max(0, y - int(bh * 0.15))
@@ -572,7 +573,7 @@ async def face_blur(
                 selected_ids = set(_json.loads(face_ids)) if face_ids.strip() else None
             except Exception:
                 selected_ids = None  # invalid -> blur all
-            detector = _get_yunet_detector()
+            mp_detector = _get_mp_detector()
             # Build reference tracks if selective mode (same clustering as face-scan)
             ref_tracks = []  # [{hist}]
             if selected_ids is not None:
@@ -587,7 +588,7 @@ async def face_blur(
                         h2, w2 = f2.shape[:2]
                         sc2 = 480 / w2 if w2 > 480 else 1.0
                         sm2 = cv2.resize(f2, (int(w2*sc2), int(h2*sc2))) if sc2 < 1 else f2
-                        for bx in _detect_faces_yunet(detector, sm2):
+                        for bx in _detect_faces_mp(mp_detector, sm2):
                             box = (int(bx[0]/sc2), int(bx[1]/sc2), int(bx[2]/sc2), int(bx[3]/sc2))
                             hist = _face_hist(f2, box)
                             if hist is None: continue
