@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Type, Download } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || ''
+const API = import.meta.env.VITE_API_URL || 'https://api.alphamedia.bond'
 
 export default function SubtitleExtractor() {
   const [url, setUrl] = useState('')

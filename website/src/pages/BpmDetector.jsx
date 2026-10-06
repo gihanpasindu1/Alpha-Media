@@ -5,7 +5,7 @@ import { Music, Upload } from 'lucide-react'
 import { useXhrUpload } from '../hooks/useXhrUpload'
 import ProgressBar from '../components/ProgressBar'
 
-const API = import.meta.env.VITE_API_URL || ''
+const API = import.meta.env.VITE_API_URL || 'https://api.alphamedia.bond'
 
 function getBpmCategory(bpm) {
   if (bpm < 60) return { label: 'Very Slow', color: '#6378ff' }

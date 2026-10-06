@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Palette, Upload, Copy } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || ''
+const API = import.meta.env.VITE_API_URL || 'https://api.alphamedia.bond'
 
 export default function ColorPalette() {
   const [file, setFile] = useState(null)

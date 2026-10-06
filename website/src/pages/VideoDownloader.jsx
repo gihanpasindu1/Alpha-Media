@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Download, Play, Music, Video } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || ''
+const API = import.meta.env.VITE_API_URL || 'https://api.alphamedia.bond'
 
 export default function VideoDownloader() {
   const [url, setUrl] = useState('')

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Link as LinkIcon, Copy } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || ''
+const API = import.meta.env.VITE_API_URL || 'https://api.alphamedia.bond'
 
 export default function UrlShortener() {
   const [url, setUrl] = useState('')

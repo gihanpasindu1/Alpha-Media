@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { FileText, Upload, GitMerge, Scissors, Minimize2 } from 'lucide-react'
 import { PDFDocument } from 'pdf-lib'
 
-const API = import.meta.env.VITE_API_URL || ''
+const API = import.meta.env.VITE_API_URL || 'https://api.alphamedia.bond'
 
 function MergeTab() {
   const [files, setFiles] = useState([])
