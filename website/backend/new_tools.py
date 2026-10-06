@@ -1,5 +1,6 @@
 import os
 import uuid
+import asyncio
 import subprocess
 import shutil
 import sqlite3
@@ -153,6 +154,8 @@ async def audio_convert(
     file: UploadFile = File(...),
     format: str = Form(...) # 'mp3', 'wav', 'ogg', 'm4a'
 ):
+    if format not in ('mp3', 'wav', 'ogg', 'm4a'):
+        raise HTTPException(400, "Format must be one of: mp3, wav, ogg, m4a")
     req_id = str(uuid.uuid4())
     in_path = DATA_DIR / f"in_{req_id}.tmp"
     out_path = DATA_DIR / f"out_{req_id}.{format}"
@@ -181,15 +184,29 @@ async def text_to_speech(
     req: TTSRequest,
     background_tasks: BackgroundTasks
 ):
-    import edge_tts
     req_id = str(uuid.uuid4())
     out_path = DATA_DIR / f"tts_{req_id}.mp3"
-    
+
+    # The egress proxy breaks WebSocket upgrades, so edge-tts (WebSocket-based)
+    # cannot work here. Use gTTS (plain HTTPS) which works through the proxy.
+    # Map edge-tts voice names (en-US-AriaNeural) to gTTS lang codes (en).
+    def _to_gtts_lang(voice: str) -> str:
+        v = (voice or "en").lower()
+        # try full locale first (en-us -> en), then base language
+        for cand in (v.replace("_", "-"), v.split("-")[0], v.split("_")[0]):
+            cand = cand.split("-")[0]
+            if len(cand) == 2:
+                return cand
+        return "en"
+
     try:
-        communicate = edge_tts.Communicate(req.text, req.lang)
-        await communicate.save(str(out_path))
+        from gtts import gTTS
+        gtts_lang = _to_gtts_lang(req.lang)
+        # gTTS honors REQUESTS_CA_BUNDLE / proxy env vars via requests.
+        tts = gTTS(req.text, lang=gtts_lang)
+        tts.save(str(out_path))
     except Exception as e:
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, f"TTS failed: {e}")
         
     background_tasks.add_task(cleanup_files, out_path)
     return FileResponse(out_path, filename="speech.mp3")
@@ -272,7 +289,7 @@ async def image_to_pdf(
     return FileResponse(out_path, filename="images.pdf")
 
 @router.post("/api/pdf-compress")
-async def pdf_compress(
+async def pdf_compress_gs(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...)
 ):
@@ -380,17 +397,29 @@ class YtSumReq(BaseModel):
 @router.post("/api/yt-summarize")
 async def yt_summarize(req: YtSumReq):
     from youtube_transcript_api import YouTubeTranscriptApi
+    from youtube_transcript_api._errors import NoTranscriptFound
     import google.generativeai as genai
     import urllib.parse
-    
+
     try:
         if "v=" in req.url:
             video_id = urllib.parse.parse_qs(urllib.parse.urlparse(req.url).query).get("v", [None])[0]
         else:
             video_id = req.url.split("/")[-1].split("?")[0]
-            
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        full_text = " ".join([t['text'] for t in transcript])
+
+        if not video_id:
+            raise HTTPException(400, "Could not parse a video ID from the URL.")
+
+        ytt = YouTubeTranscriptApi()
+        try:
+            fetched = ytt.fetch(video_id, languages=["en"])
+        except NoTranscriptFound:
+            # Fall back to whatever transcript language is available
+            available = list(ytt.list(video_id))
+            if not available:
+                raise HTTPException(404, "No transcripts found for this video.")
+            fetched = available[0].fetch()
+        full_text = " ".join(s.text for s in fetched.snippets)
         
         genai.configure(api_key=req.api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
@@ -404,7 +433,8 @@ async def yt_summarize(req: YtSumReq):
 @router.post("/api/voice-change")
 async def voice_change(background_tasks: BackgroundTasks, file: UploadFile = File(...), effect: str = Form(...)):
     req_id = str(uuid.uuid4())
-    in_path = DATA_DIR / f"in_voice_{req_id}_{file.filename}"
+    safe_name = Path(file.filename).name
+    in_path = DATA_DIR / f"in_voice_{req_id}_{safe_name}"
     out_path = DATA_DIR / f"out_voice_{req_id}.mp3"
     
     with open(in_path, "wb") as f:
@@ -450,7 +480,8 @@ async def video_reverse(background_tasks: BackgroundTasks, file: UploadFile = Fi
 @router.post("/api/audio-visualizer")
 async def audio_visualizer(background_tasks: BackgroundTasks, file: UploadFile = File(...), color: str = Form(...)):
     req_id = str(uuid.uuid4())
-    in_path = DATA_DIR / f"in_vis_{req_id}_{file.filename}"
+    safe_name = Path(file.filename).name
+    in_path = DATA_DIR / f"in_vis_{req_id}_{safe_name}"
     out_path = DATA_DIR / f"out_vis_{req_id}.mp4"
     
     with open(in_path, "wb") as f:
@@ -475,7 +506,8 @@ async def auto_caption(background_tasks: BackgroundTasks, file: UploadFile = Fil
     import speech_recognition as sr
     import pydub
     req_id = str(uuid.uuid4())
-    in_path = DATA_DIR / f"in_cap_{req_id}_{file.filename}"
+    safe_name = Path(file.filename).name
+    in_path = DATA_DIR / f"in_cap_{req_id}_{safe_name}"
     wav_path = DATA_DIR / f"temp_{req_id}.wav"
     
     with open(in_path, "wb") as f:

@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import { Scissors, Upload, Download, Link, Zap } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || ''
 
 // ── Tab 1: Trim directly from a URL (no full download!) ──────────────────────
 function UrlTrimTab() {

@@ -14,7 +14,7 @@ from pypdf import PdfReader, PdfWriter
 from PIL import Image
 import io
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 import aiofiles
@@ -53,6 +53,52 @@ import urllib.request
 import urllib.parse
 import json
 import time as _time
+import socket as _socket
+
+def _pot_server_up(host="127.0.0.1", port=4416, timeout=1.0) -> bool:
+    """Check whether the bgutil PO-token server is running. If not, we skip
+    its extractor args so yt-dlp falls back to its other PO providers."""
+    try:
+        s = _socket.create_connection((host, port), timeout=timeout)
+        s.close()
+        return True
+    except OSError:
+        return False
+
+def _yt_extractor_args() -> dict:
+    args = {"youtube": ["player_client=web"]}
+    if _pot_server_up():
+        # bgutil-ytdlp-pot-provider auto-fetches PO tokens from the server on port 4416
+        args["youtubepot-bgutil-httpserver"] = ["base_url=http://localhost:4416"]
+    return args
+
+def _yt_cookiefile():
+    """Fresh cookies (from the Google sign-in) win; repo cookies.txt is fallback."""
+    candidates = [
+        os.environ.get("YTDLP_COOKIES"),
+        Path(__file__).resolve().parent.parent.parent / "cookies.txt",
+    ]
+    for p in candidates:
+        if p and Path(p).exists():
+            return str(p)
+    return None
+
+def _yt_dlp_opts(**extra) -> dict:
+    """Base yt-dlp options that work behind this machine's egress proxy:
+    - no-certifi: use the system CA bundle (it trusts the egress proxy's CA)
+    - socket_timeout: fail fast instead of hanging on tarpitted requests
+    - cookiefile: attach YouTube login cookies when available
+    """
+    opts = {
+        "compat_opts": {"no-certifi"},
+        "socket_timeout": 30,
+        "extractor_args": _yt_extractor_args(),
+    }
+    cf = _yt_cookiefile()
+    if cf:
+        opts["cookiefile"] = cf
+    opts.update(extra)
+    return opts
 
 @app.get("/api/download")
 async def download_video(
@@ -74,19 +120,14 @@ async def download_video(
             pp = []
             merge = {"merge_output_format": "mp4"}
 
-        ydl_opts = {
-            "format": fmt,
-            "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
-            "noplaylist": True,
-            "quiet": True,
-            "no_warnings": True,
-            # bgutil-ytdlp-pot-provider auto-fetches PO tokens from the server on port 4416
-            "extractor_args": {
-                "youtube": ["player_client=web"],
-                "youtubepot-bgutil-httpserver": ["base_url=http://localhost:4416"]
-            },
+        ydl_opts = _yt_dlp_opts(
+            format=fmt,
+            outtmpl=str(out_dir / "%(title)s.%(ext)s"),
+            noplaylist=True,
+            quiet=True,
+            no_warnings=True,
             **merge,
-        }
+        )
         if pp:
             ydl_opts["postprocessors"] = pp
 
@@ -133,7 +174,15 @@ async def download_video(
             shutil.rmtree(out_dir, ignore_errors=True)
         except Exception:
             pass
-        raise HTTPException(500, str(e))
+        msg = str(e)
+        # YouTube throttles datacenter IPs; surface a clear, actionable error.
+        if "timed out" in msg.lower() or "sign in to confirm" in msg.lower() or "bot" in msg.lower():
+            raise HTTPException(
+                502,
+                "YouTube refused the download from this server's network. "
+                "This is fixed by signing a Google account in on the server (planned next step).",
+            )
+        raise HTTPException(500, msg)
 
 
 # ─────────────────────────────── VIDEO INFO ─────────────────────────────────
@@ -227,19 +276,15 @@ async def trim_video_from_url(
         if end_sec <= start_sec:
             raise HTTPException(400, "End time must be after start time.")
 
-        ydl_opts = {
-            "format": f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best",
-            "outtmpl": str(out_dir / "clip.%(ext)s"),
-            "noplaylist": True,
-            "quiet": True,
-            "merge_output_format": "mp4",
-            "download_ranges": yt_dlp.utils.download_range_func(None, [(start_sec, end_sec)]),
-            "force_keyframes_at_cuts": True,
-            "extractor_args": {
-                "youtube": ["player_client=web"],
-                "youtubepot-bgutil-httpserver": ["base_url=http://localhost:4416"]
-            },
-        }
+        ydl_opts = _yt_dlp_opts(
+            format=f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best",
+            outtmpl=str(out_dir / "clip.%(ext)s"),
+            noplaylist=True,
+            quiet=True,
+            merge_output_format="mp4",
+            download_ranges=yt_dlp.utils.download_range_func(None, [(start_sec, end_sec)]),
+            force_keyframes_at_cuts=True,
+        )
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
@@ -275,6 +320,7 @@ async def trim_video_from_url(
 
 @app.post("/api/gif")
 async def video_to_gif(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     fps: int = Form(10),
     width: int = Form(480),
@@ -303,6 +349,7 @@ async def video_to_gif(
         if result.returncode != 0:
             raise HTTPException(500, result.stderr[-500:])
 
+        background_tasks.add_task(cleanup, out_path)
         return FileResponse(str(out_path), filename="output.gif", media_type="image/gif")
     finally:
         cleanup(in_path, palette_path)
@@ -457,7 +504,7 @@ async def detect_bpm(file: UploadFile = File(...)):
 # ─────────────────────────────── PDF TOOLKIT ────────────────────────────────
 
 @app.post("/api/pdf/merge")
-async def pdf_merge(files: list[UploadFile] = File(...)):
+async def pdf_merge(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
     paths = []
     out_path = temp_path(".pdf")
     try:
@@ -474,13 +521,14 @@ async def pdf_merge(files: list[UploadFile] = File(...)):
         with open(out_path, "wb") as fh:
             writer.write(fh)
 
+        background_tasks.add_task(cleanup, out_path)
         return FileResponse(str(out_path), filename="merged.pdf", media_type="application/pdf")
     finally:
         cleanup(*paths)
 
 
 @app.post("/api/pdf/split")
-async def pdf_split(file: UploadFile = File(...)):
+async def pdf_split(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     in_path = temp_path(".pdf")
     out_dir = temp_path()
     out_dir.mkdir()
@@ -498,13 +546,14 @@ async def pdf_split(file: UploadFile = File(...)):
                 writer.write(fh)
 
         shutil.make_archive(str(zip_path.with_suffix("")), "zip", str(out_dir))
+        background_tasks.add_task(cleanup, zip_path)
         return FileResponse(str(zip_path), filename="split_pages.zip", media_type="application/zip")
     finally:
         cleanup(in_path, out_dir)
 
 
 @app.post("/api/pdf/compress")
-async def pdf_compress(file: UploadFile = File(...)):
+async def pdf_compress(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     in_path = temp_path(".pdf")
     out_path = temp_path(".pdf")
     try:
@@ -525,6 +574,7 @@ async def pdf_compress(file: UploadFile = File(...)):
         original_size = in_path.stat().st_size
         compressed_size = out_path.stat().st_size
 
+        background_tasks.add_task(cleanup, out_path)
         return FileResponse(
             str(out_path),
             filename="compressed.pdf",
@@ -685,18 +735,14 @@ async def extract_subtitles(url: str = Form(...)):
     out_dir = temp_path()
     out_dir.mkdir(parents=True)
     try:
-        ydl_opts = {
-            "skip_download": True,
-            "writeautomaticsub": True,
-            "writesubtitles": True,
-            "subtitlesformat": "srt",
-            "outtmpl": str(out_dir / "%(title)s.%(ext)s"),
-            "quiet": True,
-            "extractor_args": {
-                "youtube": ["player_client=web"],
-                "youtubepot-bgutil-httpserver": ["base_url=http://localhost:4416"]
-            },
-        }
+        ydl_opts = _yt_dlp_opts(
+            skip_download=True,
+            writeautomaticsub=True,
+            writesubtitles=True,
+            subtitlesformat="srt",
+            outtmpl=str(out_dir / "%(title)s.%(ext)s"),
+            quiet=True,
+        )
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
@@ -734,7 +780,16 @@ async def extract_subtitles(url: str = Form(...)):
 
 # ─────────────────────────────── BACKGROUND REMOVER (REMBG) ─────────────────────────
 
-from rembg import remove
+from rembg import remove, new_session
+# u2net (~170MB) instead of the 1GB default model: runs safely on small CPUs
+# without risking an out-of-memory kill of the whole service.
+_BG_SESSION = None
+
+def _bg_session():
+    global _BG_SESSION
+    if _BG_SESSION is None:
+        _BG_SESSION = new_session("u2net")
+    return _BG_SESSION
 
 @app.post("/api/bg-remove")
 async def bg_remove(file: UploadFile = File(...)):
@@ -747,7 +802,7 @@ async def bg_remove(file: UploadFile = File(...)):
         with open(in_path, 'rb') as i:
             with open(out_path, 'wb') as o:
                 input_data = i.read()
-                output_data = remove(input_data)
+                output_data = remove(input_data, session=_bg_session())
                 o.write(output_data)
                 
         content = out_path.read_bytes()
@@ -965,6 +1020,23 @@ async def merge_videos(
 
 import new_tools
 app.include_router(new_tools.router)
+
+# ─────────────────────────────── SERVE BUILT FRONTEND ───────────────────────
+# The Vite build (website/dist) is served from the same origin as the API, so
+# the site works on any public URL with zero baked-in API host configuration.
+from fastapi.staticfiles import StaticFiles
+DIST_DIR = Path(__file__).resolve().parent.parent / "dist"
+if DIST_DIR.is_dir():
+    _assets = DIST_DIR / "assets"
+    if _assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=_assets), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        candidate = DIST_DIR / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(DIST_DIR / "index.html")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

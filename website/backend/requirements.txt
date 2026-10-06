@@ -23,3 +23,4 @@ youtube-transcript-api
 SpeechRecognition
 pydub
 google-generativeai
+gtts

@@ -5,7 +5,7 @@ import { ArrowLeft, Mic, Upload } from 'lucide-react'
 import { useXhrUpload } from '../hooks/useXhrUpload'
 import ProgressBar from '../components/ProgressBar'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || ''
 
 export default function VoiceChanger() {
   const [file, setFile] = useState(null)

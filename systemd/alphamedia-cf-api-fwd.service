@@ -1,0 +1,12 @@
+[Unit]
+Description=Forwards sinkholed Cloudflare API IP through egress proxy
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/hatch/workspace/tgbot/systemd/socat-cf-api.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
