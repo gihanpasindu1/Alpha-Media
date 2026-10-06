@@ -139,31 +139,24 @@ async def download_video(
             raise HTTPException(500, "yt-dlp produced no output file.")
 
         out_file = files[0]
-        ext = "mp3" if format == "mp3" else "mp4"
         safe_filename = urllib.parse.quote(out_file.name)
         media_type = "audio/mpeg" if format == "mp3" else "video/mp4"
-
-        def stream_file():
-            with open(out_file, "rb") as f:
-                while True:
-                    chunk = f.read(65536)
-                    if not chunk:
-                        break
-                    yield chunk
-            # cleanup after streaming
+        # FileResponse sets Content-Length and handles Range requests,
+        # so browsers can resume interrupted downloads instead of restarting.
+        # Cleanup happens via BackgroundTasks after the response completes.
+        from fastapi import BackgroundTasks
+        def _cleanup():
             try:
                 import shutil
                 shutil.rmtree(out_dir, ignore_errors=True)
             except Exception:
                 pass
-
-        return StreamingResponse(
-            stream_file(),
+        return FileResponse(
+            path=str(out_file),
             media_type=media_type,
-            headers={
-                "Content-Disposition": f"attachment; filename*=utf-8''{safe_filename}",
-                "X-Filename": safe_filename,
-            }
+            filename=out_file.name,
+            headers={"X-Filename": safe_filename},
+            background=BackgroundTasks([_cleanup]),
         )
 
     except HTTPException:
