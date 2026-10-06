@@ -50,7 +50,7 @@
   width: 30px;
   height: 30px;
   background: var(--accent);
-  color: #0b0e14;
+  color: #fff;
   border-radius: 7px;
   display: flex;
   align-items: center;
@@ -82,12 +82,10 @@
 
 .nav-link:hover {
   color: var(--text);
-  background: rgba(255,255,255,0.05);
 }
 
 .nav-link.active {
   color: var(--accent);
-  background: rgba(245,166,35,0.08);
 }
 
 /* Right side */
@@ -125,7 +123,7 @@
   align-items: center;
   gap: 4px;
   background: var(--accent);
-  color: #0b0e14;
+  color: #fff;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 14px;
   font-weight: 700;

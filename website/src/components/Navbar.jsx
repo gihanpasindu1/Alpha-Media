@@ -6,7 +6,11 @@ import { useTheme } from '../ThemeContext'
 import './Navbar.css'
 
 const links = [
-  { to: '/tools', label: 'All Tools', icon: Grid3X3 },
+  { to: '/tools', label: 'Features' },
+  { to: '/tools', label: 'Tools' },
+  { to: '/tools', label: 'Docs' },
+  { to: '/tools', label: 'Examples' },
+  { to: 'https://github.com', label: 'GitHub', external: true },
 ]
 
 export default function Navbar() {
@@ -21,13 +25,14 @@ export default function Navbar() {
         </Link>
 
         <nav className="navbar-links">
-          {links.map(({ to, label, icon: Icon }) => (
+          {links.map(({ to, label, external }) => external ? (
+            <a key={label} href={to} target="_blank" rel="noopener" className="nav-link">{label}</a>
+          ) : (
             <NavLink
-              key={to}
+              key={label}
               to={to}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
-              <Icon size={14} />
               {label}
             </NavLink>
           ))}
@@ -72,14 +77,17 @@ export default function Navbar() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18 }}
           >
-            {links.map(({ to, label, icon: Icon }) => (
+            {links.map(({ to, label, external }) => external ? (
+              <a key={label} href={to} target="_blank" rel="noopener" className="mobile-link" onClick={() => setOpen(false)}>
+                {label}
+              </a>
+            ) : (
               <NavLink
-                key={to}
+                key={label}
                 to={to}
                 className={({ isActive }) => `mobile-link ${isActive ? 'active' : ''}`}
                 onClick={() => setOpen(false)}
               >
-                <Icon size={15} />
                 {label}
               </NavLink>
             ))}
