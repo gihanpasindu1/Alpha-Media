@@ -1,15 +1,14 @@
 [Unit]
-Description=AlphaMedia public tunnel (cloudflared quick tunnel)
-After=network-online.target alphamedia-api.service alphamedia-cf-api-fwd.service
-Wants=network-online.target alphamedia-api.service
-Requires=alphamedia-cf-api-fwd.service
+Description=AlphaMedia Cloudflare named tunnel (api.alphamedia.bond)
+After=network-online.target alphamedia-api.service cloudflared-edge-fwd.service
+Wants=network-online.target
+Requires=alphamedia-api.service
 
 [Service]
 Type=simple
 User=root
-EnvironmentFile=/home/hatch/.config/alphamedia-api/env
 Environment=TUNNEL_TRANSPORT_PROTOCOL=http2
-ExecStart=/usr/local/bin/cloudflared tunnel --url http://127.0.0.1:8000
+ExecStart=/bin/bash -c 'exec /usr/local/bin/cloudflared tunnel --no-autoupdate --config /home/hatch/workspace/tgbot/systemd/cloudflared-alphamedia.yml run --token "$(cat /home/hatch/.cloudflared-alphamedia-token)"'
 Restart=always
 RestartSec=10
 StandardOutput=append:/var/log/alphamedia-tunnel.log
