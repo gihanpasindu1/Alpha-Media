@@ -40,8 +40,14 @@ export default function BackgroundRemover() {
     try {
       if (mode === 'browser') {
         setStatus({ type: 'loading', msg: 'Removing background with AI in browser… (first time may take ~10s to load model)' })
-        const { removeBackground } = await import('@imgly/background-removal')
-        const resultBlob = await removeBackground(file)
+        const { removeBackground, Config } = await import('@imgly/background-removal')
+        // Force single-threaded WASM: avoids needing cross-origin isolation headers
+        // which Cloudflare Pages doesn't send by default.
+        const config = {
+          publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/',
+          debug: false,
+        };
+        const resultBlob = await removeBackground(file, config)
         const url = URL.createObjectURL(resultBlob)
         setResult(url)
         setStatus({ type: 'success', msg: 'Background removed locally! Click download below.' })
