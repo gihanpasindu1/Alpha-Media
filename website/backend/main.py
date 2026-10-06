@@ -436,16 +436,17 @@ async def face_scan(file: UploadFile = File(...)):
         if is_video:
             cap = cv2.VideoCapture(str(in_path))
             total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-            # dense sampling: every 10th frame, up to 120 samples — catches
-            # faces that appear mid-video, not just the opening shot
-            step = max(1, min(10, total // 120))
-            idx = 0
-            while True:
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30
+            # sample ~1 frame per second, max 60 samples — fast but covers whole video
+            n_samples = min(60, max(10, int(total / fps)))
+            step = max(1, total // n_samples)
+            for idx in range(0, total, step):
+                cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
                 ret, frame = cap.read()
-                if not ret: break
-                if idx % step == 0:
+                if ret:
                     frames.append(frame)
-                idx += 1
+                if len(frames) >= 60:
+                    break
             cap.release()
         else:
             img = cv2.imread(str(in_path))
