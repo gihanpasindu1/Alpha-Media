@@ -382,8 +382,9 @@ async def face_blur(
 
         k = max(intensity | 1, 3)
 
-        def blur_faces(img, detector):
-            faces = detector.detect(img)
+        def blur_faces(img, detector, cached_faces=None):
+            # cached_faces: reuse previously detected boxes to skip NN inference
+            faces = cached_faces if cached_faces is not None else detector.detect(img)
             if faces[1] is not None:
                 h, w = img.shape[:2]
                 for face in faces[1]:
@@ -445,11 +446,19 @@ async def face_blur(
             out = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
             detector = cv2.FaceDetectorYN.create(str(yunet_path), "", (width, height), score_threshold=0.5, nms_threshold=0.3)
             
+            # Detect faces every 3rd frame, reuse boxes in between (~3x faster,
+            # visually identical for normal head movement).
+            DETECT_EVERY = 3
+            cached = None
+            frame_idx = 0
             while True:
                 ret, frame = cap.read()
                 if not ret: break
-                frame = blur_faces(frame, detector)
+                if frame_idx % DETECT_EVERY == 0:
+                    cached = detector.detect(frame)
+                frame = blur_faces(frame, detector, cached_faces=cached)
                 out.write(frame)
+                frame_idx += 1
                 
             cap.release()
             out.release()
