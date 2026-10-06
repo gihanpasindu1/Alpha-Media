@@ -421,17 +421,26 @@ def _get_scrfd():
     return _scrfd_app
 
 def _detect_faces_scrfd(app, bgr):
-    """Return list of (x, y, w, h) boxes using SCRFD."""
+    """Return list of (x, y, w, h, embedding) using SCRFD + face recognition.
+    Embeddings allow matching the same person across different angles."""
     faces = app.get(bgr)
-    boxes = []
+    results = []
     h, w = bgr.shape[:2]
     for f in faces:
         x1, y1, x2, y2 = f.bbox.astype(int)
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(w, x2), min(h, y2)
         if x2 > x1 and y2 > y1:
-            boxes.append((x1, y1, x2 - x1, y2 - y1))
-    return boxes
+            emb = f.get('normed_embedding', None)
+            results.append((x1, y1, x2 - x1, y2 - y1, emb))
+    return results
+
+def _emb_sim(e1, e2):
+    """Cosine similarity between face embeddings (0-1, higher = same person)."""
+    import numpy as np
+    if e1 is None or e2 is None:
+        return 0
+    return float(np.dot(e1, e2))
 
 def _face_hist(bgr, box):
     """Normalized color histogram of a face crop (for identity matching)."""
@@ -470,16 +479,16 @@ async def face_scan(file: UploadFile = File(...)):
             cap = cv2.VideoCapture(str(in_path))
             total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
             fps = cap.get(cv2.CAP_PROP_FPS) or 30
-            # sample ~6 frames per second, max 180 samples — dense enough to
-            # catch brief appearances, fast seeking keeps it quick
-            n_samples = min(180, max(30, int(total / fps * 6)))
+            # sample ~10 frames per second, max 200 samples — dense enough to
+            # catch all angles of each face
+            n_samples = min(200, max(30, int(total / fps * 10)))
             step = max(1, total // n_samples)
             for idx in range(0, total, step):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
                 ret, frame = cap.read()
                 if ret:
                     frames.append(frame)
-                if len(frames) >= 180:
+                if len(frames) >= 200:
                     break
             cap.release()
         else:
@@ -490,34 +499,34 @@ async def face_scan(file: UploadFile = File(...)):
         _dbg_frames = len(frames)
         _dbg_detections = 0
         for frame in frames:
-            h, w = frame.shape[:2]
-            scale = 480 / w if w > 480 else 1.0
-            small = cv2.resize(frame, (int(w*scale), int(h*scale))) if scale < 1 else frame
-            boxes = _detect_faces_scrfd(scrfd, frame)
-            _dbg_detections += len(boxes)
-            for box in boxes:
+            for (x, y, bw, bh, emb) in _detect_faces_scrfd(scrfd, frame):
+                box = (x, y, bw, bh)
+                _dbg_detections += 1
                 hist = _face_hist(frame, box)
-                if hist is None: continue
-                # match to existing track: high IoU with last box OR similar histogram
+                # match to existing track: face embedding similarity (works across
+                # angles), falling back to IoU + histogram for same-frame continuity
                 best, best_score = -1, 0
                 for i, t in enumerate(tracks):
+                    sim = _emb_sim(emb, t.get("emb"))
                     iou = _iou(box, t["last_box"])
-                    corr = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL)
-                    score = max(iou * 1.5, corr)
+                    corr = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL) if hist is not None else 0
+                    score = max(sim, iou * 1.5, corr)
                     if score > best_score:
                         best_score, best = score, i
-                if best >= 0 and best_score > 0.65:
+                if best >= 0 and best_score > 0.5:
                     t = tracks[best]
-                    # blend histogram, update
-                    t["hist"] = cv2.addWeighted(t["hist"], 0.7, hist, 0.3, 0)
+                    if hist is not None:
+                        t["hist"] = cv2.addWeighted(t["hist"], 0.7, hist, 0.3, 0)
+                    # keep the best embedding (highest quality)
+                    if emb is not None and t.get("emb") is None:
+                        t["emb"] = emb
                     t["last_box"] = box
                     t["count"] += 1
                 else:
-                    x, y, bw, bh = box
                     thumb = frame[y:y+bh, x:x+bw]
                     _, enc = cv2.imencode(".jpg", cv2.resize(thumb, (96, 96)) if thumb.size else thumb)
                     tracks.append({
-                        "hist": hist, "last_box": box, "count": 1,
+                        "hist": hist, "emb": emb, "last_box": box, "count": 1,
                         "thumb_b64": _b64.b64encode(enc.tobytes()).decode(),
                     })
         # drop single-appearance tracks only for videos (false positives);
@@ -597,29 +606,37 @@ async def face_blur(
             except Exception:
                 selected_ids = None  # invalid -> blur all
             mp_detector_blur = _get_mp_detector()
-            # Build reference tracks if selective mode (same clustering as face-scan)
-            ref_tracks = []  # [{hist}]
+            scrfd_ref = _get_scrfd()
+            # Build reference tracks if selective mode (same embedding clustering as face-scan)
+            ref_tracks = []  # [{hist, emb}]
             if selected_ids is not None:
                 cap2 = cv2.VideoCapture(str(in_path))
                 total2 = int(cap2.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-                step2 = max(1, min(10, total2 // 120))
-                idx2 = 0
-                while True:
+                fps2 = cap2.get(cv2.CAP_PROP_FPS) or 30
+                n2 = min(100, max(20, int(total2 / fps2 * 5)))
+                step2 = max(1, total2 // n2)
+                for idx2 in range(0, total2, step2):
+                    cap2.set(cv2.CAP_PROP_POS_FRAMES, idx2)
                     ret2, f2 = cap2.read()
                     if not ret2: break
-                    if idx2 % step2 == 0:
-                        for bx in _detect_faces_mp(mp_detector_blur, f2):
-                            hist = _face_hist(f2, bx)
-                            if hist is None: continue
-                            best, bs = -1, 0
-                            for i, t in enumerate(ref_tracks):
-                                c = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL)
-                                if c > bs: bs, best = c, i
-                            if best >= 0 and bs > 0.65:
+                    for (x, y, bw, bh, emb) in _detect_faces_scrfd(scrfd_ref, f2):
+                        box = (x, y, bw, bh)
+                        hist = _face_hist(f2, box)
+                        best, bs = -1, 0
+                        for i, t in enumerate(ref_tracks):
+                            sim = _emb_sim(emb, t.get("emb"))
+                            corr = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL) if hist is not None else 0
+                            score = max(sim, corr)
+                            if score > bs: bs, best = score, i
+                        if best >= 0 and bs > 0.5:
+                            if hist is not None:
                                 ref_tracks[best]["hist"] = cv2.addWeighted(ref_tracks[best]["hist"], 0.7, hist, 0.3, 0)
-                            else:
-                                ref_tracks.append({"hist": hist})
-                    idx2 += 1
+                            if emb is not None and ref_tracks[best].get("emb") is None:
+                                ref_tracks[best]["emb"] = emb
+                        else:
+                            ref_tracks.append({"hist": hist, "emb": emb})
+                    if len(ref_tracks) >= 20:
+                        break
                 cap2.release()
 
             def _should_blur(frame, box):
