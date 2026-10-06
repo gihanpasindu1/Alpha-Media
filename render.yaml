@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: alphamedia-api
+    runtime: docker
+    dockerfilePath: ./website/backend/Dockerfile
+    dockerContext: ./website/backend
+    plan: free
+    healthCheckPath: /openapi.json
+    envVars:
+      - key: PORT
+        value: 8080
