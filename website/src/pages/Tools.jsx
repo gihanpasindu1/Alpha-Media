@@ -187,14 +187,13 @@ export default function Tools() {
                   variants={fadeUp}
                 >
                   <Link to={to} className="tool-card-item">
-                    <div className="tool-card-icon" style={{ background: `${color}15`, color }}>
-                      <Icon size={22} />
+                    <div className="tool-card-icon">
+                      <Icon size={36} strokeWidth={1.8} />
                     </div>
                     <div className="tool-card-body">
                       <h3>{label}</h3>
                       <p>{desc}</p>
                     </div>
-                    <ArrowRight size={15} className="tool-card-arrow" />
                   </Link>
                 </motion.div>
               ))}
@@ -334,50 +333,41 @@ export default function Tools() {
         .tool-card-item {
           display: flex;
           flex-direction: column;
-          gap: 14px;
-          padding: 24px 22px;
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: var(--radius);
+          align-items: center;
+          text-align: center;
+          gap: 0;
+          padding: 40px 28px;
+          background: #fff;
+          border: 1px solid rgba(0,0,0,0.04);
+          border-radius: 16px;
           text-decoration: none;
-          color: var(--text);
-          transition: var(--transition);
-          position: relative;
-          overflow: hidden;
-          box-shadow: var(--card-shadow);
-          min-height: 160px;
+          color: #111;
+          transition: transform 0.2s, box-shadow 0.2s;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+          min-height: 200px;
         }
-        .tool-card-item::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 2px;
-          background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
-          opacity: 0;
-          transition: var(--transition);
+        [data-theme="dark"] .tool-card-item {
+          background: #181d27;
+          border-color: rgba(255,255,255,0.08);
+          color: #e8eaf2;
         }
         .tool-card-item:hover {
-          background: var(--surface2);
-          border-color: var(--border-hover);
-          transform: translateY(-3px);
-          box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+          transform: translateY(-4px);
+          box-shadow: 0 12px 32px rgba(0,0,0,0.1);
         }
-        .tool-card-item:hover::before { opacity: 1; }
         .tool-card-icon {
-          width: 52px;
-          height: 52px;
-          border-radius: 14px;
+          color: #0d9488;
+          margin-bottom: 20px;
           display: flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
         }
         .tool-card-body { flex: 1; }
         .tool-card-body h3 {
-          font-size: 16px;
+          font-size: 20px;
           font-weight: 700;
-          color: var(--text);
-          margin-bottom: 6px;
+          color: inherit;
+          margin: 0 0 10px;
           line-height: 1.3;
         }
         .tool-card-body p {
