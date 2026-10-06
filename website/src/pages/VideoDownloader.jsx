@@ -6,9 +6,16 @@ const API = import.meta.env.VITE_API_URL || 'https://api.alphamedia.bond'
 
 export default function VideoDownloader() {
   const [url, setUrl] = useState('')
+  const handleUrlChange = (v) => {
+    setUrl(v)
+    // auto-detect playlist URLs
+    const isPl = v.includes('/playlist?') || v.includes('list=PL')
+    setPlaylistAuto(isPl)
+  }
   const [quality, setQuality] = useState('720')
   const [format, setFormat] = useState('video')
   const [isPlaylist, setIsPlaylist] = useState(false)
+  const [playlistAuto, setPlaylistAuto] = useState(false)
   const [info, setInfo] = useState(null)
   const [status, setStatus] = useState(null) // {type, msg}
   const [loading, setLoading] = useState(false)
@@ -36,7 +43,8 @@ export default function VideoDownloader() {
     setLoading(true)
     setStatus({ type: 'loading', msg: 'Downloading… this usually takes ~30 seconds.' })
     try {
-      const downloadUrl = `${API}/api/download?url=${encodeURIComponent(url)}&quality=${quality}&format=${format}&playlist=${isPlaylist}`;
+      const asPlaylist = isPlaylist || playlistAuto
+      const downloadUrl = `${API}/api/download?url=${encodeURIComponent(url)}&quality=${quality}&format=${format}&playlist=${asPlaylist}`;
       
       // Trigger download directly from the backend endpoint which will proxy the video
       window.location.href = downloadUrl;
@@ -66,7 +74,7 @@ export default function VideoDownloader() {
           <div className="form-group">
             <label>Video URL</label>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <input className="input" value={url} onChange={e => setUrl(e.target.value)}
+              <input className="input" value={url} onChange={e => handleUrlChange(e.target.value)}
                 placeholder="https://youtube.com/watch?v=..." onKeyDown={e => e.key === 'Enter' && fetchInfo()} />
               <button className="btn btn-secondary" onClick={fetchInfo} disabled={fetching || !url.trim()} style={{ flexShrink: 0 }}>
                 {fetching ? <span className="spinner" /> : <Play size={16} />}
@@ -111,10 +119,17 @@ export default function VideoDownloader() {
             )}
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, cursor: 'pointer', fontSize: 14 }}>
-            <input type="checkbox" checked={isPlaylist} onChange={e => setIsPlaylist(e.target.checked)} style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
-            📋 Download as playlist (all videos as ZIP)
-          </label>
+          {(playlistAuto || isPlaylist) ? (
+            <div style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--accent-glow)', borderRadius: 8, fontSize: 14 }}>
+              📋 Playlist detected — will download all videos as ZIP
+              <button onClick={() => { setPlaylistAuto(false); setIsPlaylist(false); }} style={{ marginLeft: 10, background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13 }}>✕ single video only</button>
+            </div>
+          ) : (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, cursor: 'pointer', fontSize: 14 }}>
+              <input type="checkbox" checked={isPlaylist} onChange={e => setIsPlaylist(e.target.checked)} style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
+              📋 Download as playlist (all videos as ZIP)
+            </label>
+          )}
 
           <button className="btn btn-primary" onClick={handleDownload} disabled={loading || !url.trim()} style={{ width: '100%' }}>
             {loading ? <><span className="spinner" /> Processing…</> : <><Download size={18} /> Download</>}
