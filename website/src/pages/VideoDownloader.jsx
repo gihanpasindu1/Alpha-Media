@@ -8,6 +8,7 @@ export default function VideoDownloader() {
   const [url, setUrl] = useState('')
   const [quality, setQuality] = useState('720')
   const [format, setFormat] = useState('video')
+  const [isPlaylist, setIsPlaylist] = useState(false)
   const [info, setInfo] = useState(null)
   const [status, setStatus] = useState(null) // {type, msg}
   const [loading, setLoading] = useState(false)
@@ -35,7 +36,7 @@ export default function VideoDownloader() {
     setLoading(true)
     setStatus({ type: 'loading', msg: 'Downloading… this usually takes ~30 seconds.' })
     try {
-      const downloadUrl = `${API}/api/download?url=${encodeURIComponent(url)}&quality=${quality}&format=${format}`;
+      const downloadUrl = `${API}/api/download?url=${encodeURIComponent(url)}&quality=${quality}&format=${format}&playlist=${isPlaylist}`;
       
       // Trigger download directly from the backend endpoint which will proxy the video
       window.location.href = downloadUrl;
@@ -109,6 +110,11 @@ export default function VideoDownloader() {
               </div>
             )}
           </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, cursor: 'pointer', fontSize: 14 }}>
+            <input type="checkbox" checked={isPlaylist} onChange={e => setIsPlaylist(e.target.checked)} style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
+            📋 Download as playlist (all videos as ZIP)
+          </label>
 
           <button className="btn btn-primary" onClick={handleDownload} disabled={loading || !url.trim()} style={{ width: '100%' }}>
             {loading ? <><span className="spinner" /> Processing…</> : <><Download size={18} /> Download</>}

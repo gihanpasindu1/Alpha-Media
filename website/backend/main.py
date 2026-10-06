@@ -105,6 +105,7 @@ async def download_video(
     url: str,
     quality: str = "720",
     format: str = "video",  # "video" | "mp3"
+    playlist: bool = False,
 ):
     from fastapi.responses import StreamingResponse
     import tempfile, pathlib
@@ -122,8 +123,8 @@ async def download_video(
 
         ydl_opts = _yt_dlp_opts(
             format=fmt,
-            outtmpl=str(out_dir / "%(title)s.%(ext)s"),
-            noplaylist=True,
+            outtmpl=str(out_dir / "%(playlist_index)02d-%(title)s.%(ext)s"),
+            noplaylist=not playlist,
             quiet=True,
             no_warnings=True,
             **merge,
@@ -138,9 +139,18 @@ async def download_video(
         if not files:
             raise HTTPException(500, "yt-dlp produced no output file.")
 
-        out_file = files[0]
+        if playlist and len(files) > 1:
+            # Zip multiple files for playlist download
+            import zipfile
+            zip_path = out_dir / "playlist.zip"
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for f in sorted(files):
+                    zf.write(f, f.name)
+            out_file = zip_path
+        else:
+            out_file = files[0]
         safe_filename = urllib.parse.quote(out_file.name)
-        media_type = "audio/mpeg" if format == "mp3" else "video/mp4"
+        media_type = "application/zip" if out_file.suffix == ".zip" else ("audio/mpeg" if format == "mp3" else "video/mp4")
         # FileResponse sets Content-Length and handles Range requests,
         # so browsers can resume interrupted downloads instead of restarting.
         # Cleanup happens via BackgroundTasks after the response completes.
