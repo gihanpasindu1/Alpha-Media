@@ -369,18 +369,18 @@ def _mp_detector():
             base_options=mp.tasks.BaseOptions(
                 model_asset_path=_mp_model_path()),
             running_mode=mp.tasks.vision.RunningMode.IMAGE,
-            min_detection_confidence=0.5,
+            min_detection_confidence=0.3,
         )
     )
 
 _mp_model = None
 def _mp_model_path():
-    p = Path("models/blaze_face_short_range.tflite")
+    p = Path("models/blaze_face_full_range.tflite")
     if not p.exists():
         import urllib.request
         p.parent.mkdir(exist_ok=True)
         urllib.request.urlretrieve(
-            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite",
+            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/latest/blaze_face_full_range.tflite",
             str(p))
     return str(p)
 
