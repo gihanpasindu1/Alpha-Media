@@ -698,7 +698,7 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                 cap2 = cv2.VideoCapture(str(in_path))
                 total2 = int(cap2.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
                 fps2 = cap2.get(cv2.CAP_PROP_FPS) or 30
-                n2 = min(100, max(20, int(total2 / fps2 * 5)))
+                n2 = min(40, max(12, int(total2 / fps2 * 3)))
                 step2 = max(1, total2 // n2)
                 for idx2 in range(0, total2, step2):
                     cap2.set(cv2.CAP_PROP_POS_FRAMES, idx2)
@@ -777,7 +777,7 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                 "ffmpeg", "-y",
                 "-i", str(out_path),
                 "-i", str(in_path),
-                "-c:v", "libx264", "-preset", "fast", "-crf", "26",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
                 "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0?",
                 str(final_video_path)
             ]
