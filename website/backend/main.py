@@ -813,8 +813,21 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                 if emb is None:
                     return False
                 for sel_emb in _selected_embs:
-                    if _emb_sim(emb, sel_emb) > 0.35:
+                    if _emb_sim(emb, sel_emb) > 0.28:
                         return True
+                # Fallback: histogram matching for different angles/lighting after cuts
+                hist = _face_hist(frame, box)
+                if hist is not None:
+                    import hashlib as _hh5
+                    _vh5 = _hh5.md5(data).hexdigest()
+                    _tracks = _scan_track_cache.get(_vh5 + "_full", [])
+                    for sid in selected_ids:
+                        if sid < len(_tracks):
+                            th = _tracks[sid].get("hist")
+                            if th is not None:
+                                c = cv2.compareHist(hist, th, cv2.HISTCMP_CORREL)
+                                if c > 0.45:
+                                    return True
                 return False
 
             # Both modes use MediaPipe every 3rd frame (fast). Selective mode adds
