@@ -456,8 +456,8 @@ def _detect_faces_scrfd(app, bgr):
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(w, x2), min(h, y2)
         if x2 > x1 and y2 > y1:
-            emb = f.get('normed_embedding', None)
-            score = float(f.get('det_score', 0.5))
+            emb = getattr(f, 'normed_embedding', None)
+            score = float(getattr(f, 'det_score', 0.5) or 0.5)
             results.append((x1, y1, x2 - x1, y2 - y1, emb, score))
     # NMS: remove duplicates via IoU > 0.4 OR containment (>70% of small box inside large)
     results.sort(key=lambda r: r[5], reverse=True)
@@ -569,16 +569,28 @@ def _do_face_scan(data: bytes, filename: str):
                     sim = _emb_sim(emb, t.get("emb"))
                     iou = _iou(box, t["last_box"])
                     corr = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL) if hist is not None else 0
-                    score = max(sim, iou * 1.5, corr)
+                    # Strict: embeddings are the identity signal. Only match if
+                    # embedding similarity is high, OR (no embedding AND high IoU/histogram
+                    # for same-position continuity). Never match different people via histogram alone.
+                    if emb is not None and t.get("emb") is not None:
+                        score = sim  # embedding-only for identity
+                    else:
+                        score = max(iou * 1.5, corr)  # fallback when no embeddings
                     if score > best_score:
                         best_score, best = score, i
-                if best >= 0 and best_score > 0.5:
+                if best >= 0 and best_score > 0.35:
                     t = tracks[best]
                     if hist is not None:
                         t["hist"] = cv2.addWeighted(t["hist"], 0.7, hist, 0.3, 0)
-                    # keep the best embedding (highest quality)
-                    if emb is not None and t.get("emb") is None:
-                        t["emb"] = emb
+                    # Update embedding with running average (adapts to angles)
+                    if emb is not None:
+                        if t.get("emb") is not None:
+                            # L2-normalized running average
+                            avg = t["emb"] * 0.7 + emb * 0.3
+                            import numpy as _np
+                            t["emb"] = avg / _np.linalg.norm(avg)
+                        else:
+                            t["emb"] = emb
                     t["last_box"] = box
                     t["count"] += 1
                 else:
