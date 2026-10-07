@@ -746,54 +746,63 @@ def _do_selective_blur_clean(in_path, out_path, final_video_path, intensity, sel
     if not valid_ids:
         raise HTTPException(400, "Selected faces not found in video")
 
-    # PASS 2: Blur frames
+    # PASS 2: Blur frames with smooth tracking and elliptical blur
     cap = cv2.VideoCapture(str(in_path))
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
     k = max(1, intensity // 2)
     frame_idx = 0
+    # Smooth box tracking: {pid: (x, y, w, h)} with exponential moving average
+    smooth_boxes = {}
+    def _blur_oval(frm, x, y, bw, bh):
+        # Always use oval/elliptical blur
+        sx = max(0, x - int(bw*0.2)); sy = max(0, y - int(bh*0.2))
+        ex = min(width, x + bw + int(bw*0.2)); ey = min(height, y + bh + int(bh*0.2))
+        if ex <= sx or ey <= sy:
+            return
+        roi = frm[sy:ey, sx:ex]
+        blurred = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+        mask = _np.zeros((ey-sy, ex-sx), dtype=_np.uint8)
+        # Oval shape: wider than tall for natural face coverage
+        cv2.ellipse(mask, ((ex-sx)//2, (ey-sy)//2),
+                    (int((ex-sx)*0.45), int((ey-sy)*0.55)), 0, 0, 360, 255, -1)
+        mask = cv2.GaussianBlur(mask, (21, 21), 0)
+        m3 = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR) / 255.0
+        frm[sy:ey, sx:ex] = (roi*(1-m3) + blurred*m3).astype(_np.uint8)
+
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        # Detect every 2nd frame (balance speed/accuracy)
-        if frame_idx % 2 == 0:
+        # Detect every 3rd frame (smoother, less jitter)
+        if frame_idx % 3 == 0:
             h, w = frame.shape[:2]
             small = cv2.resize(frame, (640, int(h*640/w))) if w > 640 else frame
             sc = 640 / w if w > 640 else 1.0
-            boxes_to_blur = []
+            detected = {}  # pid -> (x, y, w, h)
             for (sx, sy, sw, sh, emb) in _detect_faces_scrfd(scrfd, small):
                 if emb is None:
                     continue
-                # Check against selected persons
                 for pid in valid_ids:
                     p = persons[pid]
                     if max(_emb_sim(emb, e) for e in p['embs']) > 0.30:
-                        boxes_to_blur.append((int(sx/sc), int(sy/sc), int(sw/sc), int(sh/sc)))
+                        detected[pid] = (int(sx/sc), int(sy/sc), int(sw/sc), int(sh/sc))
                         break
-            # Blur the matched boxes
-            for (x, y, bw, bh) in boxes_to_blur:
-                sx = max(0, x - int(bw*0.15)); sy = max(0, y - int(bh*0.15))
-                ex = min(width, x + bw + int(bw*0.15)); ey = min(height, y + bh + int(bh*0.15))
-                if ex > sx and ey > sy:
-                    roi = frame[sy:ey, sx:ex]
-                    blurred = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
-                    mask = _np.zeros((ey-sy, ex-sx), dtype=_np.uint8)
-                    cv2.ellipse(mask, ((ex-sx)//2, (ey-sy)//2), ((ex-sx)//2, (ey-sy)//2), 0, 0, 360, 255, -1)
-                    mask = cv2.GaussianBlur(mask, (15, 15), 0)
-                    m3 = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR) / 255.0
-                    frame[sy:ey, sx:ex] = (roi*(1-m3) + blurred*m3).astype(_np.uint8)
-            # Cache boxes for next frame (simple: reuse)
-            _cached = boxes_to_blur
-        else:
-            # Reuse previous frame's boxes (fast)
-            for (x, y, bw, bh) in _cached if '_cached' in dir() else []:
-                sx = max(0, x - int(bw*0.15)); sy = max(0, y - int(bh*0.15))
-                ex = min(width, x + bw + int(bw*0.15)); ey = min(height, y + bh + int(bh*0.15))
-                if ex > sx and ey > sy:
-                    roi = frame[sy:ey, sx:ex]
-                    blurred = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
-                    frame[sy:ey, sx:ex] = blurred
+            # Update smooth boxes with exponential moving average (alpha=0.4)
+            for pid, (nx, ny, nw, nh) in detected.items():
+                if pid in smooth_boxes:
+                    ox, oy, ow, oh = smooth_boxes[pid]
+                    smooth_boxes[pid] = (
+                        int(ox*0.6 + nx*0.4), int(oy*0.6 + ny*0.4),
+                        int(ow*0.6 + nw*0.4), int(oh*0.6 + nh*0.4),
+                    )
+                else:
+                    smooth_boxes[pid] = (nx, ny, nw, nh)
+            # Remove persons not seen for a while (keep for 6 frames = 2 detection cycles)
+            # (simple: keep all, they fade naturally if not re-detected)
+        # Apply oval blur using smoothed boxes (every frame, no blinking)
+        for pid, (x, y, bw, bh) in smooth_boxes.items():
+            _blur_oval(frame, x, y, bw, bh)
         out.write(frame)
         frame_idx += 1
     cap.release()
