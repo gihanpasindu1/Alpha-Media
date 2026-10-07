@@ -441,12 +441,13 @@ def _get_scrfd():
         _scrfd_app.prepare(ctx_id=0, det_size=(640, 640))
         # Lower threshold for higher recall (catch more faces)
         if hasattr(_scrfd_app.models.get('detection'), 'det_thresh'):
-            _scrfd_app.models['detection'].det_thresh = 0.3
+            _scrfd_app.models['detection'].det_thresh = 0.25
     return _scrfd_app
 
 def _detect_faces_scrfd(app, bgr):
     """Return list of (x, y, w, h, embedding) using SCRFD + face recognition.
-    Embeddings allow matching the same person across different angles."""
+    Embeddings allow matching the same person across different angles.
+    Applies NMS to remove duplicate detections of the same face."""
     faces = app.get(bgr)
     results = []
     h, w = bgr.shape[:2]
@@ -456,8 +457,30 @@ def _detect_faces_scrfd(app, bgr):
         x2, y2 = min(w, x2), min(h, y2)
         if x2 > x1 and y2 > y1:
             emb = f.get('normed_embedding', None)
-            results.append((x1, y1, x2 - x1, y2 - y1, emb))
-    return results
+            score = float(f.get('det_score', 0.5))
+            results.append((x1, y1, x2 - x1, y2 - y1, emb, score))
+    # NMS: remove duplicates via IoU > 0.4 OR containment (>70% of small box inside large)
+    results.sort(key=lambda r: r[5], reverse=True)
+    kept = []
+    for r in results:
+        x, y, bw, bh = r[0], r[1], r[2], r[3]
+        dup = False
+        for k in kept:
+            kx, ky, kw, kh = k[0], k[1], k[2], k[3]
+            if _iou((x, y, bw, bh), (kx, ky, kw, kh)) > 0.4:
+                dup = True
+                break
+            # Containment: if small box is >70% inside a larger kept box, it's a duplicate
+            ix1, iy1 = max(x, kx), max(y, ky)
+            ix2, iy2 = min(x+bw, kx+kw), min(y+bh, ky+kh)
+            inter = max(0, ix2-ix1) * max(0, iy2-iy1)
+            small_area = min(bw*bh, kw*kh)
+            if small_area > 0 and inter / small_area > 0.7:
+                dup = True
+                break
+        if not dup:
+            kept.append(r)
+    return [(x, y, bw, bh, emb) for (x, y, bw, bh, emb, _) in kept]
 
 def _emb_sim(e1, e2):
     """Cosine similarity between face embeddings (0-1, higher = same person)."""
