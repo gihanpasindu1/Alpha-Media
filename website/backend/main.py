@@ -813,7 +813,7 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                 if emb is None:
                     return False
                 for sel_emb in _selected_embs:
-                    if _emb_sim(emb, sel_emb) > 0.28:
+                    if _emb_sim(emb, sel_emb) > 0.25:
                         return True
                 # Fallback: histogram matching for different angles/lighting after cuts
                 hist = _face_hist(frame, box)
@@ -895,7 +895,7 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                             _selected_embs.append(_tmp_tracks[_sid]["emb"])
                 if not _selected_embs:
                     SELECTIVE = False
-            DETECT_EVERY = 3
+            DETECT_EVERY = 2 if SELECTIVE else 3
             cached_boxes = []  # [(x, y, bw, bh, track_id or None)]
             frame_idx = 0
             k = max(1, intensity // 2)
