@@ -2,6 +2,21 @@ import os
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 _face_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="face")
+_scan_track_cache = {}
+# Persistent cache on disk (survives API restarts)
+import pickle as _pk
+_CACHE_FILE = "/tmp/scan_track_cache.pkl"
+try:
+    with open(_CACHE_FILE, "rb") as _f:
+        _scan_track_cache = _pk.load(_f)
+except:
+    _scan_track_cache = {}
+def _save_cache():
+    try:
+        with open(_CACHE_FILE, "wb") as _f:
+            _pk.dump(_scan_track_cache, _f)
+    except:
+        pass
 # Async blur jobs: {job_id: {status, progress, result_path, error}}
 _blur_jobs = {}
 import uuid
@@ -606,6 +621,14 @@ def _do_face_scan(data: bytes, filename: str):
             tracks = [t for t in tracks if t["count"] >= 2]
         faces = [{"id": i, "thumbnail": t["thumb_b64"], "appearances": t["count"]}
                  for i, t in enumerate(tracks)]
+        # Cache track embeddings by video hash for blur to reuse (ensures ID match)
+        import hashlib as _hh2
+        _vh2 = _hh2.md5(data).hexdigest()
+        _scan_track_cache[_vh2] = [t.get("emb") for t in tracks]
+        _scan_track_cache[_vh2 + "_full"] = tracks
+        _save_cache()
+        if len(_scan_track_cache) > 20:
+            _scan_track_cache.pop(next(iter(_scan_track_cache)))
         return JSONResponse({"faces": faces, "count": len(faces),
                                  "_debug": {"frames_sampled": _dbg_frames,
                                             "total_detections": _dbg_detections,
@@ -766,20 +789,99 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                         break
                 cap2.release()
 
-            def _match_track_id_hist(frame, box):
-                """Match a face box to reference track ID via histogram correlation."""
-                hist = _face_hist(frame, box)
-                if hist is None:
-                    return -1
-                best, bs = -1, 0
-                for i, t in enumerate(ref_tracks):
-                    c = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL)
-                    if c > bs: bs, best = c, i
-                return best if bs > 0.35 else -1
+            def _should_blur_face(frame, box):
+                """Check if a face box matches any selected face via embedding."""
+                if not SELECTIVE:
+                    return True
+                if not _selected_embs:
+                    return True
+                x, y, bw, bh = box
+                h, w = frame.shape[:2]
+                sx = max(0, x - int(bw*0.1)); sy = max(0, y - int(bh*0.1))
+                ex = min(w, x + bw + int(bw*0.1)); ey = min(h, y + bh + int(bh*0.1))
+                if ex <= sx or ey <= sy:
+                    return False
+                crop = frame[sy:ey, sx:ex]
+                if crop.size == 0:
+                    return False
+                # Get embedding via SCRFD on crop (fast for small crop)
+                faces = _detect_faces_scrfd(scrfd_ref, crop)
+                if not faces:
+                    # Fallback: if no face in crop, don't blur (avoid false positives)
+                    return False
+                emb = faces[0][4]
+                if emb is None:
+                    return False
+                for sel_emb in _selected_embs:
+                    if _emb_sim(emb, sel_emb) > 0.35:
+                        return True
+                return False
 
             # Both modes use MediaPipe every 3rd frame (fast). Selective mode adds
             # IoU tracking to keep identities stable across frames.
             SELECTIVE = selected_ids is not None
+            # Load selected face embeddings: from cache if available, else build via scan
+            _selected_embs = []
+            if SELECTIVE:
+                import hashlib as _hh
+                _vh = _hh.md5(data).hexdigest()
+                _cached = _scan_track_cache.get(_vh, [])
+                if _cached:
+                    for _sid in selected_ids:
+                        if _sid < len(_cached) and _cached[_sid] is not None:
+                            _selected_embs.append(_cached[_sid])
+                # If no cache, build tracks now via scan logic
+                if not _selected_embs:
+                    # Build tracks from video (same as scan)
+                    _tmp_cap = cv2.VideoCapture(str(in_path))
+                    _tmp_total = int(_tmp_cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+                    _tmp_fps = _tmp_cap.get(cv2.CAP_PROP_FPS) or 30
+                    _tmp_n = min(60, max(15, int(_tmp_total / _tmp_fps * 3)))
+                    _tmp_step = max(1, _tmp_total // _tmp_n)
+                    _tmp_frames = []
+                    for _idx in range(0, _tmp_total, _tmp_step):
+                        _tmp_cap.set(cv2.CAP_PROP_POS_FRAMES, _idx)
+                        _ret, _f = _tmp_cap.read()
+                        if _ret:
+                            _h, _w = _f.shape[:2]
+                            if _w > 640:
+                                _f = cv2.resize(_f, (640, int(_h*640/_w)))
+                            _tmp_frames.append(_f)
+                        if len(_tmp_frames) >= 60:
+                            break
+                    _tmp_cap.release()
+                    _tmp_tracks = []
+                    # Inline clustering (same as scan)
+                    for _fr in _tmp_frames:
+                        for (_x, _y, _bw, _bh, _emb) in _detect_faces_scrfd(scrfd_ref, _fr):
+                            _box = (_x, _y, _bw, _bh)
+                            _hist = _face_hist(_fr, _box)
+                            _best, _bs = -1, 0
+                            for _i, _t in enumerate(_tmp_tracks):
+                                _sim = _emb_sim(_emb, _t.get("emb"))
+                                if _emb is not None and _t.get("emb") is not None:
+                                    _score = _sim
+                                else:
+                                    _score = 0
+                                if _score > _bs:
+                                    _bs, _best = _score, _i
+                            if _best >= 0 and _bs > 0.35:
+                                _t = _tmp_tracks[_best]
+                                if _emb is not None and _t.get("emb") is not None:
+                                    import numpy as _npp
+                                    _avg = _t["emb"] * 0.7 + _emb * 0.3
+                                    _t["emb"] = _avg / _npp.linalg.norm(_avg)
+                                elif _emb is not None:
+                                    _t["emb"] = _emb
+                                _t["count"] = _t.get("count", 0) + 1
+                            else:
+                                _tmp_tracks.append({"emb": _emb, "hist": _hist, "count": 1})
+                    _tmp_tracks = [t for t in _tmp_tracks if t.get("count", 0) >= 2]
+                    for _sid in selected_ids:
+                        if _sid < len(_tmp_tracks) and _tmp_tracks[_sid].get("emb") is not None:
+                            _selected_embs.append(_tmp_tracks[_sid]["emb"])
+                if not _selected_embs:
+                    SELECTIVE = False
             DETECT_EVERY = 3
             cached_boxes = []  # [(x, y, bw, bh, track_id or None)]
             frame_idx = 0
@@ -807,32 +909,18 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                             if not overlap:
                                 mp_boxes.append(sbox)
                     if SELECTIVE:
-                        # Match each detected box: first try IoU with cached (tracking),
-                        # then fall back to histogram matching against reference tracks
+                        # Direct: check each box against selected embeddings (no tracking)
                         new_cached = []
-                        used_old = set()
                         for (nx, ny, nw, nh) in mp_boxes:
-                            # 1. IoU tracking: find overlapping cached box
-                            best_iou, best_tid, best_idx = 0, -1, -1
-                            for idx, (ox, oy, ow, oh, otid) in enumerate(cached_boxes):
-                                if idx in used_old: continue
-                                iou = _iou((nx,ny,nw,nh), (ox,oy,ow,oh))
-                                if iou > best_iou: best_iou, best_tid, best_idx = iou, otid, idx
-                            if best_iou > 0.3 and best_tid is not None:
-                                # Tracked: keep the same ID
-                                new_cached.append((nx, ny, nw, nh, best_tid))
-                                used_old.add(best_idx)
-                            else:
-                                # 2. New face or lost track: match via histogram
-                                tid = _match_track_id_hist(frame, (nx, ny, nw, nh))
-                                new_cached.append((nx, ny, nw, nh, tid))
+                            if _should_blur_face(frame, (nx, ny, nw, nh)):
+                                new_cached.append((nx, ny, nw, nh, 1))
+                            # else: skip (don't blur)
                         cached_boxes = new_cached
                     else:
                         cached_boxes = [(x, y, bw, bh, None) for (x, y, bw, bh) in mp_boxes]
                 h_f, w_f = frame.shape[:2]
                 for (x, y, bw, bh, tid) in cached_boxes:
-                    if SELECTIVE and tid not in selected_ids:
-                        continue
+                    # For selective, boxes are already filtered; for blur-all, blur everything
                     startX = max(0, x - int(bw * 0.15)); startY = max(0, y - int(bh * 0.15))
                     endX = min(w_f, x + bw + int(bw * 0.15)); endY = min(h_f, y + bh + int(bh * 0.15))
                     if endX > startX and endY > startY:
