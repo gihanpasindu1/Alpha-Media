@@ -18,6 +18,7 @@ export default function FaceBlur() {
   const [isVideo, setIsVideo] = useState(false)
   const [faces, setFaces] = useState([])       // [{id, thumbnail, appearances}]
   const [selected, setSelected] = useState(new Set())  // ids to blur
+  const [elapsed, setElapsed] = useState(0)  // blur timer seconds
   const { upload, progress, phase, reset } = useXhrUpload()
 
   const onDrop = useCallback((accepted) => {
@@ -79,15 +80,24 @@ export default function FaceBlur() {
       const r = await fetch(`${API}/api/face-blur`, { method: 'POST', body: fd })
       if (!r.ok) throw new Error('blur failed to start')
       const { job_id } = await r.json()
+      // Start timer
+      setElapsed(0)
+      const _t0 = Date.now()
+      const _timer = setInterval(() => setElapsed(Math.floor((Date.now() - _t0) / 1000)), 1000)
       // Poll for completion
       let done = false
-      for (let i = 0; i < 120; i++) {  // up to 10 min
-        await new Promise(res => setTimeout(res, 5000))
-        const sr = await fetch(`${API}/api/face-blur-status/${job_id}`)
-        if (!sr.ok) throw new Error('status check failed')
-        const st = await sr.json()
-        if (st.status === 'done') { done = true; break }
-        if (st.status === 'error') throw new Error(st.error || 'blur failed')
+      try {
+        for (let i = 0; i < 120; i++) {  // up to 10 min
+          await new Promise(res => setTimeout(res, 5000))
+          const sr = await fetch(`${API}/api/face-blur-status/${job_id}`)
+          if (!sr.ok) throw new Error('status check failed')
+          const st = await sr.json()
+          if (st.status === 'done') { done = true; break }
+          if (st.status === 'error') throw new Error(st.error || 'blur failed')
+        }
+      } finally {
+        clearInterval(_timer)
+        setElapsed(Math.floor((Date.now() - _t0) / 1000))
       }
       if (!done) throw new Error('blur timed out')
       // Download result
@@ -200,7 +210,7 @@ export default function FaceBlur() {
 
           <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
             <button className="btn btn-primary" onClick={handleBlur} disabled={loading || !file || selected.size === 0} style={{ flex: 1 }}>
-              {loading ? <><span className="spinner" /> Processing…</> : <><Eye size={18} /> Blur {selected.size > 0 ? `${selected.size} ` : ''}Face{selected.size === 1 ? '' : 's'}</>}
+              {loading ? <><span className="spinner" /> Processing… {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}</> : <><Eye size={18} /> Blur {selected.size > 0 ? `${selected.size} ` : ''}Face{selected.size === 1 ? '' : 's'}</>}
             </button>
             {result && (
               <button className="btn btn-secondary" onClick={handleDownload}>
@@ -208,6 +218,12 @@ export default function FaceBlur() {
               </button>
             )}
           </div>
+
+          {result && elapsed > 0 && (
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 8 }}>
+              Completed in {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
+            </p>
+          )}
 
           <ProgressBar phase={phase} progress={progress} />
 
