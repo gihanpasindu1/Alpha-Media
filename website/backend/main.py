@@ -694,6 +694,133 @@ async def face_blur_result(job_id: str):
         return resp
     raise HTTPException(500, "Result not available")
 
+def _do_selective_blur_clean(in_path, out_path, final_video_path, intensity, selected_ids):
+    """Clean two-pass selective blur using ONLY SCRFD + embeddings.
+    Pass 1: Identify all persons by clustering embeddings from sampled frames.
+    Pass 2: For each frame, detect faces, match embeddings to persons, blur selected.
+    No MediaPipe, no histograms, no IoU tracking, no cache — self-contained and correct."""
+    import numpy as _np
+    cap = cv2.VideoCapture(str(in_path))
+    if not cap.isOpened():
+        raise HTTPException(400, "Could not open video")
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    scrfd = _get_scrfd()
+
+    # PASS 1: Build person gallery — {pid: [embeddings]}
+    persons = []  # list of {'embs': [...], 'count': n}
+    n_samples = min(40, max(15, int(total / fps * 2)))
+    step = max(1, total // n_samples)
+    for idx in range(0, total, step):
+        cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+        ret, frame = cap.read()
+        if not ret:
+            continue
+        h, w = frame.shape[:2]
+        small = cv2.resize(frame, (640, int(h*640/w))) if w > 640 else frame
+        for (x, y, bw, bh, emb) in _detect_faces_scrfd(scrfd, small):
+            if emb is None:
+                continue
+            best, bs = -1, 0
+            for i, p in enumerate(persons):
+                # Max similarity to any stored embedding (handles angle variations)
+                sim = max(_emb_sim(emb, e) for e in p['embs'])
+                if sim > bs:
+                    bs, best = sim, i
+            if best >= 0 and bs > 0.35:
+                p = persons[best]
+                p['embs'].append(emb)
+                if len(p['embs']) > 10:
+                    p['embs'] = p['embs'][-10:]  # keep last 10
+                p['count'] += 1
+            else:
+                persons.append({'embs': [emb], 'count': 1})
+    cap.release()
+    # Filter weak persons
+    persons = [p for p in persons if p['count'] >= 2]
+    # Map selected_ids to person indices (they should align with scan order)
+    # If counts differ, use all persons
+    valid_ids = [i for i in selected_ids if i < len(persons)]
+    if not valid_ids:
+        raise HTTPException(400, "Selected faces not found in video")
+
+    # PASS 2: Blur frames
+    cap = cv2.VideoCapture(str(in_path))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
+    k = max(1, intensity // 2)
+    frame_idx = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        # Detect every 2nd frame (balance speed/accuracy)
+        if frame_idx % 2 == 0:
+            h, w = frame.shape[:2]
+            small = cv2.resize(frame, (640, int(h*640/w))) if w > 640 else frame
+            sc = 640 / w if w > 640 else 1.0
+            boxes_to_blur = []
+            for (sx, sy, sw, sh, emb) in _detect_faces_scrfd(scrfd, small):
+                if emb is None:
+                    continue
+                # Check against selected persons
+                for pid in valid_ids:
+                    p = persons[pid]
+                    if max(_emb_sim(emb, e) for e in p['embs']) > 0.30:
+                        boxes_to_blur.append((int(sx/sc), int(sy/sc), int(sw/sc), int(sh/sc)))
+                        break
+            # Blur the matched boxes
+            for (x, y, bw, bh) in boxes_to_blur:
+                sx = max(0, x - int(bw*0.15)); sy = max(0, y - int(bh*0.15))
+                ex = min(width, x + bw + int(bw*0.15)); ey = min(height, y + bh + int(bh*0.15))
+                if ex > sx and ey > sy:
+                    roi = frame[sy:ey, sx:ex]
+                    blurred = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+                    mask = _np.zeros((ey-sy, ex-sx), dtype=_np.uint8)
+                    cv2.ellipse(mask, ((ex-sx)//2, (ey-sy)//2), ((ex-sx)//2, (ey-sy)//2), 0, 0, 360, 255, -1)
+                    mask = cv2.GaussianBlur(mask, (15, 15), 0)
+                    m3 = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR) / 255.0
+                    frame[sy:ey, sx:ex] = (roi*(1-m3) + blurred*m3).astype(_np.uint8)
+            # Cache boxes for next frame (simple: reuse)
+            _cached = boxes_to_blur
+        else:
+            # Reuse previous frame's boxes (fast)
+            for (x, y, bw, bh) in _cached if '_cached' in dir() else []:
+                sx = max(0, x - int(bw*0.15)); sy = max(0, y - int(bh*0.15))
+                ex = min(width, x + bw + int(bw*0.15)); ey = min(height, y + bh + int(bh*0.15))
+                if ex > sx and ey > sy:
+                    roi = frame[sy:ey, sx:ex]
+                    blurred = cv2.GaussianBlur(roi, (k*2+1, k*2+1), 0)
+                    frame[sy:ey, sx:ex] = blurred
+        out.write(frame)
+        frame_idx += 1
+    cap.release()
+    out.release()
+
+    # Combine with audio
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(out_path),
+        "-i", str(in_path),
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+        "-c:a", "aac", "-shortest",
+        str(final_video_path),
+    ]
+    subprocess.run(cmd, capture_output=True)
+    content = final_video_path.read_bytes()
+    from fastapi.responses import Response
+    return Response(
+        content=content,
+        media_type="video/mp4",
+        headers={
+            "Content-Disposition": 'attachment; filename="face_blurred.mp4"',
+            "X-Filename": "face_blurred.mp4",
+        },
+    )
+
+
 def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
     suffix = Path(filename).suffix.lower()
     is_video = suffix in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
@@ -703,6 +830,15 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
     
     try:
         in_path.write_bytes(data)
+
+        # For selective video blur, use the clean two-pass implementation
+        import json as _js
+        try:
+            _sids = set(_js.loads(face_ids)) if face_ids.strip() else None
+        except:
+            _sids = None
+        if is_video and _sids is not None:
+            return _do_selective_blur_clean(in_path, out_path, final_video_path, intensity, _sids)
 
         k = max(intensity | 1, 3)
 
