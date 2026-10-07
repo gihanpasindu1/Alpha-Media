@@ -439,6 +439,9 @@ def _get_scrfd():
         from insightface.app import FaceAnalysis
         _scrfd_app = FaceAnalysis(name='buffalo_s', providers=['CPUExecutionProvider'])
         _scrfd_app.prepare(ctx_id=0, det_size=(640, 640))
+        # Lower threshold for higher recall (catch more faces)
+        if hasattr(_scrfd_app.models.get('detection'), 'det_thresh'):
+            _scrfd_app.models['detection'].det_thresh = 0.3
     return _scrfd_app
 
 def _detect_faces_scrfd(app, bgr):
@@ -753,6 +756,21 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                     small_blur = cv2.resize(frame, (480, int(frame.shape[0]*480/frame.shape[1]))) if frame.shape[1] > 480 else frame
                     _sc = 480 / frame.shape[1] if frame.shape[1] > 480 else 1.0
                     mp_boxes = [(int(x/_sc), int(y/_sc), int(w_/_sc), int(h_/_sc)) for x, y, w_, h_ in _detect_faces_mp(mp_detector_blur, small_blur)]
+                    # Every 15th frame, also run SCRFD to catch faces MediaPipe misses (stronger recall)
+                    if frame_idx % 15 == 0:
+                        h_s, w_s = frame.shape[:2]
+                        sc_small = cv2.resize(frame, (640, int(h_s*640/w_s))) if w_s > 640 else frame
+                        sc_factor = 640 / w_s if w_s > 640 else 1.0
+                        for (sx, sy, sw, sh, _) in _detect_faces_scrfd(scrfd_ref, sc_small):
+                            sbox = (int(sx/sc_factor), int(sy/sc_factor), int(sw/sc_factor), int(sh/sc_factor))
+                            # Add if not overlapping existing MediaPipe boxes
+                            overlap = False
+                            for (mx, my, mw, mh) in mp_boxes:
+                                if _iou(sbox, (mx, my, mw, mh)) > 0.3:
+                                    overlap = True
+                                    break
+                            if not overlap:
+                                mp_boxes.append(sbox)
                     if SELECTIVE:
                         # Match each detected box: first try IoU with cached (tracking),
                         # then fall back to histogram matching against reference tracks
