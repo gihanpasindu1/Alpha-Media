@@ -728,20 +728,22 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                         break
                 cap2.release()
 
-            def _should_blur(frame, box):
-                if selected_ids is None:
-                    return True
+            def _match_track_id_hist(frame, box):
+                """Match a face box to reference track ID via histogram correlation."""
                 hist = _face_hist(frame, box)
-                if hist is None: return False
+                if hist is None:
+                    return -1
                 best, bs = -1, 0
                 for i, t in enumerate(ref_tracks):
                     c = cv2.compareHist(hist, t["hist"], cv2.HISTCMP_CORREL)
                     if c > bs: bs, best = c, i
-                return best in selected_ids and bs > 0.4
+                return best if bs > 0.35 else -1
 
-            # MediaPipe every 3rd frame (fast), reuse boxes between.
+            # Both modes use MediaPipe every 3rd frame (fast). Selective mode adds
+            # IoU tracking to keep identities stable across frames.
+            SELECTIVE = selected_ids is not None
             DETECT_EVERY = 3
-            cached_boxes = []
+            cached_boxes = []  # [(x, y, bw, bh, track_id or None)]
             frame_idx = 0
             k = max(1, intensity // 2)
             while True:
@@ -750,10 +752,33 @@ def _do_face_blur(data: bytes, filename: str, intensity: int, face_ids: str):
                 if frame_idx % DETECT_EVERY == 0:
                     small_blur = cv2.resize(frame, (480, int(frame.shape[0]*480/frame.shape[1]))) if frame.shape[1] > 480 else frame
                     _sc = 480 / frame.shape[1] if frame.shape[1] > 480 else 1.0
-                    cached_boxes = [(int(x/_sc), int(y/_sc), int(w_/_sc), int(h_/_sc)) for x, y, w_, h_ in _detect_faces_mp(mp_detector_blur, small_blur)]
+                    mp_boxes = [(int(x/_sc), int(y/_sc), int(w_/_sc), int(h_/_sc)) for x, y, w_, h_ in _detect_faces_mp(mp_detector_blur, small_blur)]
+                    if SELECTIVE:
+                        # Match each detected box: first try IoU with cached (tracking),
+                        # then fall back to histogram matching against reference tracks
+                        new_cached = []
+                        used_old = set()
+                        for (nx, ny, nw, nh) in mp_boxes:
+                            # 1. IoU tracking: find overlapping cached box
+                            best_iou, best_tid, best_idx = 0, -1, -1
+                            for idx, (ox, oy, ow, oh, otid) in enumerate(cached_boxes):
+                                if idx in used_old: continue
+                                iou = _iou((nx,ny,nw,nh), (ox,oy,ow,oh))
+                                if iou > best_iou: best_iou, best_tid, best_idx = iou, otid, idx
+                            if best_iou > 0.3 and best_tid is not None:
+                                # Tracked: keep the same ID
+                                new_cached.append((nx, ny, nw, nh, best_tid))
+                                used_old.add(best_idx)
+                            else:
+                                # 2. New face or lost track: match via histogram
+                                tid = _match_track_id_hist(frame, (nx, ny, nw, nh))
+                                new_cached.append((nx, ny, nw, nh, tid))
+                        cached_boxes = new_cached
+                    else:
+                        cached_boxes = [(x, y, bw, bh, None) for (x, y, bw, bh) in mp_boxes]
                 h_f, w_f = frame.shape[:2]
-                for (x, y, bw, bh) in cached_boxes:
-                    if not _should_blur(frame, (x, y, bw, bh)):
+                for (x, y, bw, bh, tid) in cached_boxes:
+                    if SELECTIVE and tid not in selected_ids:
                         continue
                     startX = max(0, x - int(bw * 0.15)); startY = max(0, y - int(bh * 0.15))
                     endX = min(w_f, x + bw + int(bw * 0.15)); endY = min(h_f, y + bh + int(bh * 0.15))
