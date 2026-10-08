@@ -3,8 +3,8 @@
 **Method:** Each site tested with a real public video URL through the site's download API (`/api/download`). WORKS = video downloaded successfully. FAILS = error (reason noted). NO TEST URL = could not find a valid public video URL to test.
 
 ## Summary
-- **WORKS: 21 / 100**
-- **FAILS: 60 / 100**
+- **WORKS: 23 / 100**
+- **FAILS: 58 / 100**
 - **NO TEST URL FOUND: 19 / 100**
 
 ## ✅ WORKS (19)
@@ -18,6 +18,8 @@
 | 5 | X (Twitter) | 4.2MB MP4 downloaded (verified 2026-10-08) |
 | 6 | Reddit | 7.4MB downloaded |
 | 7 | Pinterest | 902KB downloaded |
+| 10 | Tumblr | 6.6MB MP4 downloaded (verified 2026-10-08) |
+| 12 | VK | Video downloads (verified 2026-10-08, slow but works) |
 | 26 | Twitch | Extracts fine (clips/VODs) |
 | 29 | Odysee | Works |
 | 31 | Bilibili | Works |

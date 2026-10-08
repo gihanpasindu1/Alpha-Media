@@ -179,6 +179,12 @@ async def download_video(
         if pp:
             ydl_opts["postprocessors"] = pp
 
+        # Site-specific: Cloudflare-protected sites need browser impersonation.
+        # (Global impersonation breaks Instagram, so apply only where needed.)
+        _cf_sites = ("pexels.com", "pixabay.com", "9gag.com")
+        if any(s in url.lower() for s in _cf_sites):
+            ydl_opts["impersonate"] = "chrome"
+
         # Run yt-dlp in a SUBPROCESS via a thread (never block the uvicorn
         # event loop — concurrent downloads must not hang the API).
         # In-process downloads fail inside uvicorn ("Unexpected response")
@@ -242,6 +248,11 @@ async def download_video(
         )
 
     except HTTPException:
+        try:
+            import shutil
+            shutil.rmtree(out_dir, ignore_errors=True)
+        except Exception:
+            pass
         raise
     except Exception as e:
         try:
