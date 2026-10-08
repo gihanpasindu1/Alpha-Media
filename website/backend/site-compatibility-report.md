@@ -3,8 +3,8 @@
 **Method:** Each site tested with a real public video URL through the site's download API (`/api/download`). WORKS = video downloaded successfully. FAILS = error (reason noted). NO TEST URL = could not find a valid public video URL to test.
 
 ## Summary
-- **WORKS: 19 / 100**
-- **FAILS: 62 / 100**
+- **WORKS: 20 / 100**
+- **FAILS: 61 / 100**
 - **NO TEST URL FOUND: 19 / 100**
 
 ## ✅ WORKS (19)
@@ -13,6 +13,7 @@
 |---|------|------|
 | 1 | YouTube | 20MB MP4 downloaded |
 | 2 | TikTok | 3.1MB MP4 via TikTok daemon |
+| 3 | Instagram | 8.2MB MP4 downloaded (verified 2026-10-08) |
 | 4 | Facebook | 13MB MP4 downloaded (verified 2026-10-08) |
 | 6 | Reddit | 7.4MB downloaded |
 | 7 | Pinterest | 902KB downloaded |
@@ -33,8 +34,8 @@
 
 ## ❌ FAILS (63)
 
-**Login required (5)** — site demands an account, can't fix without user logins:
-- Instagram (#3), Vimeo (#24), Weverse (#91), Bigo Live (#94), JioHotstar (#63)
+**Login required (4)** — site demands an account, can't fix without user logins:
+- Vimeo (#24), Weverse (#91), Bigo Live (#94), JioHotstar (#63)
 
 **IP / bot blocked (14)** — site blocks datacenter/proxy IPs:
 - X/Twitter (#5), Threads (#11), Dailymotion (#25), Rumble (#28), Coub (#52), TED (#54), NBA.com (#71), NFL.com (#72), YouPorn (#76), XNXX (#77), SpankBang (#78), XVideos (#74), XHamster (#75), PornHub (#73, video deleted but site likely blocks too)
