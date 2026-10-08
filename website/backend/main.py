@@ -138,18 +138,20 @@ async def download_video(
     if "tiktok.com" in url.lower() or "vm.tiktok" in url.lower():
         import urllib.request as _urllib, urllib.parse as _uparse
         _daemon_url = f"http://127.0.0.1:8004/?url={_uparse.quote(url, safe='')}"
-        try:
+        def _fetch_daemon():
             _req = _urllib.Request(_daemon_url)
             with _urllib.urlopen(_req, timeout=300) as _resp:
-                _data = _resp.read()
-                if _resp.status == 200 and len(_data) > 10000:
-                    _fname = "tiktok_video.mp4"
-                    return StreamingResponse(
-                        iter([_data]),
-                        media_type="video/mp4",
-                        headers={"Content-Disposition": f'attachment; filename="{_fname}"'},
-                    )
-                raise HTTPException(500, f"TikTok daemon failed: {_data[:200].decode(errors='ignore')}")
+                return _resp.status, _resp.read()
+        try:
+            _status, _data = await asyncio.to_thread(_fetch_daemon)
+            if _status == 200 and len(_data) > 10000:
+                _fname = "tiktok_video.mp4"
+                return StreamingResponse(
+                    iter([_data]),
+                    media_type="video/mp4",
+                    headers={"Content-Disposition": f'attachment; filename="{_fname}"'},
+                )
+            raise HTTPException(500, f"TikTok daemon failed: {_data[:200].decode(errors='ignore')}")
         except HTTPException:
             raise
         except Exception as e:
@@ -177,11 +179,11 @@ async def download_video(
         if pp:
             ydl_opts["postprocessors"] = pp
 
-        # Run yt-dlp in a SUBPROCESS (fresh Python, no uvicorn). In-process
-        # downloads fail inside the uvicorn server ("Unexpected response")
+        # Run yt-dlp in a SUBPROCESS via a thread (never block the uvicorn
+        # event loop — concurrent downloads must not hang the API).
+        # In-process downloads fail inside uvicorn ("Unexpected response")
         # while identical code works in a plain process. Worker inherits env
-        # (proxy vars) from this process. Use setsid to detach from API's
-        # process group, and start_new_session for full isolation.
+        # (proxy vars) from this process.
         import json as _json, subprocess as _sp
         _serializable = {}
         for _k, _v in ydl_opts.items():
@@ -190,11 +192,13 @@ async def download_video(
         _opts_path.write_text(_json.dumps({"ydl_opts": _serializable}))
         _worker = str(Path(__file__).resolve().parent / "yt_dlp_worker.py")
         _py = str(Path(sys.executable))
-        _res = _sp.run(
-            [_py, _worker, str(_opts_path), url],
-            capture_output=True, text=True, timeout=600,
-            start_new_session=True,
-        )
+        def _run_worker():
+            return _sp.run(
+                [_py, _worker, str(_opts_path), url],
+                capture_output=True, text=True, timeout=600,
+                start_new_session=True,
+            )
+        _res = await asyncio.to_thread(_run_worker)
         try:
             _opts_path.unlink(missing_ok=True)
         except Exception:
