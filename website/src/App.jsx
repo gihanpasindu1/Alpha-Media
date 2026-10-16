@@ -48,6 +48,7 @@ const PdfToImages = lazy(() => import('./pages/PdfToImages'))
 const UrlShortener = lazy(() => import('./pages/UrlShortener'))
 const PasswordGenerator = lazy(() => import('./pages/PasswordGenerator'))
 const JsonFormatter = lazy(() => import('./pages/JsonFormatter'))
+const Docs = lazy(() => import('./pages/Docs'))
 
 export default function App() {
   return (
@@ -92,6 +93,7 @@ export default function App() {
           <Route path="/url-shortener" element={<UrlShortener />} />
           <Route path="/password-generator" element={<PasswordGenerator />} />
           <Route path="/json-formatter" element={<JsonFormatter />} />
+          <Route path="/docs" element={<Docs />} />
             <Route path="*" element={<NotFound />} />
           
         <Route path="/code-to-image" element={<CodeToImage />} />

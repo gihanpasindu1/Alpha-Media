@@ -1,0 +1,255 @@
+.docs-page {
+  padding: 48px 0 80px;
+}
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.docs-nav {
+  position: sticky;
+  top: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.docs-nav-title {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.docs-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.docs-nav-link:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.docs-nav-cta {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.docs-content {
+  min-width: 0;
+}
+
+.docs-hero {
+  margin-bottom: 40px;
+}
+
+.docs-hero h1 {
+  font-size: 40px;
+  margin: 0 0 12px;
+  letter-spacing: -0.5px;
+}
+
+.docs-hero p {
+  font-size: 17px;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 640px;
+}
+
+.docs-section {
+  margin-bottom: 44px;
+  scroll-margin-top: 90px;
+}
+
+.docs-section h2 {
+  font-size: 24px;
+  margin: 0 0 14px;
+}
+
+.docs-section h3 {
+  font-size: 17px;
+  margin: 22px 0 8px;
+}
+
+.docs-section p {
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+
+.docs-section p strong,
+.docs-section li strong {
+  color: var(--text);
+}
+
+.docs-steps,
+.docs-list,
+.docs-guide-card ol {
+  color: var(--text-muted);
+  line-height: 1.7;
+  padding-left: 22px;
+  margin: 0 0 12px;
+}
+
+.docs-steps li,
+.docs-list li,
+.docs-guide-card li {
+  margin-bottom: 8px;
+}
+
+.docs-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.docs-tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.docs-tool-card h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.docs-tool-card p {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.docs-guides {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.docs-guide-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.docs-guide-card h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.docs-code {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.docs-note {
+  font-size: 14px;
+  background: var(--accent-glow);
+  border: 1px solid var(--border-hover);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.docs-faq {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.docs-faq-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px 18px;
+}
+
+.docs-faq-item summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 14px 0;
+  list-style: none;
+}
+
+.docs-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.docs-faq-item p {
+  margin: 0 0 16px;
+  font-size: 14.5px;
+}
+
+.docs-contact {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.docs-contact h2 {
+  margin-top: 0;
+}
+
+.docs-contact p {
+  margin-bottom: 0;
+}
+
+@media (max-width: 860px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .docs-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .docs-nav-title {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .docs-nav-cta {
+    margin-top: 0;
+  }
+
+  .docs-hero h1 {
+    font-size: 32px;
+  }
+}

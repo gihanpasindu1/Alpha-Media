@@ -8,7 +8,7 @@ import './Navbar.css'
 const links = [
   { to: '/tools', label: 'Features' },
   { to: '/tools', label: 'Tools' },
-  { to: '/tools', label: 'Docs' },
+  { to: '/docs', label: 'Docs' },
   { to: '/tools', label: 'Examples' },
   { to: 'https://github.com', label: 'GitHub', external: true },
 ]
