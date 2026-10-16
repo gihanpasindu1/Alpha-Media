@@ -1,16 +1,18 @@
 import { Link } from 'react-router-dom'
 import { Zap } from 'lucide-react'
+import { useTheme } from '../ThemeContext'
 import './Footer.css'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
+  const { theme } = useTheme()
 
   return (
     <footer className="footer">
       <div className="container footer-inner">
         <div className="footer-left">
           <Link to="/" className="footer-logo">
-            <img src="/logo.png" alt="AlphaMedia" height="38" />
+            <img src={theme === 'dark' ? '/logo-dark.png' : '/logo.png'} alt="AlphaMedia" height="38" />
           </Link>
           <p className="footer-desc">
             The Ultimate Free Multimedia Toolkit. Professional-grade processing right in your browser.
