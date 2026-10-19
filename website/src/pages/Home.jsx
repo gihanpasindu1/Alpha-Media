@@ -1,9 +1,15 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Image, Video, Music, FileText } from 'lucide-react'
+import { ArrowRight, Download, Image, Video, Music, FileText } from 'lucide-react'
 import './Home.css'
 
 const categories = [
+  {
+    icon: Download,
+    title: 'Video Downloader',
+    desc: 'Save videos & playlists from YouTube, TikTok, Instagram & more',
+    to: '/download',
+  },
   {
     icon: Image,
     title: 'Image Editor',
