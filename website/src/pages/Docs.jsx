@@ -108,8 +108,9 @@ export default function Docs() {
               without installing software or creating an account.
             </p>
             <p>
-              Most tools process your files directly on your device, so they are fast and private.
-              A few tools that need heavy processing — like the video downloader — run on our servers instead.
+              Some tools process your files directly on your device, so they are fast and private.
+              Tools that need heavy processing — like the video downloader, AI face blur
+              or text-to-speech — run on our servers instead.
             </p>
           </section>
 
@@ -187,13 +188,13 @@ export default function Docs() {
                 api.alphamedia.bond/openapi.json
               </a>.
             </p>
-            <pre className="docs-code">{`# Example: fetch available formats for a video
-curl -X POST https://api.alphamedia.bond/api/formats \\
-  -H "Content-Type: application/json" \\
-  -d '{"url": "https://www.youtube.com/watch?v=..."}'`}</pre>
+            <pre className="docs-code">{`# Example: download a video's audio as MP3
+curl "https://api.alphamedia.bond/api/download?url=https://www.youtube.com/watch?v=...&format=mp3" -o audio.mp3
+
+# Query parameters: url (required), quality (default 720), format (video|mp3), playlist (true|false)`}</pre>
             <p className="docs-note">
-              The API is free for reasonable use. Please do not abuse it — excessive automated
-              requests may be rate-limited.
+              The API is free for reasonable use. If you build on it, please keep
+              request rates sensible — heavy automated abuse degrades the service for everyone.
             </p>
           </section>
 
@@ -201,7 +202,7 @@ curl -X POST https://api.alphamedia.bond/api/formats \\
             <h2>Privacy</h2>
             <ul className="docs-list">
               <li><strong>No account needed.</strong> We do not ask for your name, email or any personal details.</li>
-              <li><strong>Most tools run in your browser.</strong> Your files never leave your device for tools like the image compressor, QR generator or PDF toolkit.</li>
+              <li><strong>Many tools run in your browser.</strong> Your files never leave your device for tools like the image compressor, background remover, QR generator or password generator.</li>
               <li><strong>Server-processed files are deleted.</strong> Video downloads and other server-side jobs are removed after processing — we do not keep copies of your media.</li>
               <li><strong>No tracking profiles.</strong> We do not build advertising profiles from your usage.</li>
             </ul>
