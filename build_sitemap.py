@@ -21,6 +21,9 @@ xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 core_pages = [
     ('/', 1.0),
     ('/tools', 0.9),
+    ('/docs', 0.9),
+    ('/features', 0.8),
+    ('/examples', 0.8),
 ]
 
 for path, priority in core_pages:

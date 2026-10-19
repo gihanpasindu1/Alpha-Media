@@ -9,6 +9,18 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://alphamedia.bond/docs</loc>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.bond/features</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://alphamedia.bond/examples</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://alphamedia.bond/add-subtitles</loc>
     <priority>0.8</priority>
   </url>
@@ -55,10 +67,6 @@
   <url>
     <loc>https://alphamedia.bond/convert-image</loc>
     <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://alphamedia.bond/docs</loc>
-    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://alphamedia.bond/download</loc>
