@@ -4,6 +4,8 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
 import Tools from './pages/Tools'
+import Features from './pages/Features'
+import Examples from './pages/Examples'
 import NotFound from './pages/NotFound'
 
 import CodeToImage from './pages/CodeToImage'
@@ -58,6 +60,8 @@ export default function App() {
         <Suspense fallback={<div style={{ padding: '100px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading tool...</div>}>
           <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/examples" element={<Examples />} />
           <Route path="/download" element={<VideoDownloader />} />
           <Route path="/trim" element={<ClipTrimmer />} />
           <Route path="/gif" element={<VideoToGif />} />

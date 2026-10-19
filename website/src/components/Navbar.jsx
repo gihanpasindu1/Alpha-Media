@@ -6,10 +6,10 @@ import { useTheme } from '../ThemeContext'
 import './Navbar.css'
 
 const links = [
-  { to: '/tools', label: 'Features' },
+  { to: '/features', label: 'Features' },
   { to: '/tools', label: 'Tools' },
   { to: '/docs', label: 'Docs' },
-  { to: '/tools', label: 'Examples' },
+  { to: '/examples', label: 'Examples' },
   { to: 'https://github.com', label: 'GitHub', external: true },
 ]
 
